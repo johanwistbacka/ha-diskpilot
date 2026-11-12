@@ -1,16 +1,30 @@
 """Status and one optimal-cost sensor for every program."""
 
 from homeassistant.components.sensor import SensorEntity
+from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, PROGRAMS, VERSION
+from .const import DOMAIN, VERSION
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
     runtime = entry.runtime_data
-    async_add_entities([StatusSensor(runtime), *(ProgramSensor(runtime, p) for p in PROGRAMS)])
+    added = set()
+    async_add_entities([StatusSensor(runtime)])
+
+    @callback
+    def add_profiles():
+        missing = set(runtime.profiles) - added
+        added.update(missing)
+        if missing:
+            async_add_entities(
+                [ProgramSensor(runtime, key) for key in runtime.profiles if key in missing]
+            )
+
+    entry.async_on_unload(async_dispatcher_connect(hass, runtime.signal, add_profiles))
+    add_profiles()
 
 
 class BaseSensor(SensorEntity):
@@ -59,6 +73,7 @@ class StatusSensor(BaseSensor):
             "run_count": len(self.runtime.runs),
             "unlabelled_runs": sum(r.program is None for r in self.runtime.runs),
             "recent_runs": self.runtime.summaries(),
+            "profiles": [{"id": key, "name": name} for key, name in self.runtime.profiles.items()],
             "version": VERSION,
         }
 
@@ -67,8 +82,12 @@ class ProgramSensor(BaseSensor):
     _attr_icon = "mdi:cash-clock"
 
     def __init__(self, runtime, program):
-        super().__init__(runtime, f"{program}_cost", f"{PROGRAMS[program]} kostnad")
+        super().__init__(runtime, f"{program}_cost", f"{runtime.profiles[program]} kostnad")
         self.program = program
+
+    @property
+    def name(self):
+        return f"{self.runtime.profiles[self.program]} kostnad"
 
     @property
     def native_value(self):
@@ -91,7 +110,7 @@ class ProgramSensor(BaseSensor):
             **result,
             "diskpilot_entry_id": self.runtime.entry.entry_id,
             "program": self.program,
-            "program_name": PROGRAMS[self.program],
+            "program_name": self.runtime.profiles[self.program],
             "currency": self.native_unit_of_measurement,
             "horizon_hours": self.runtime.config["horizon_hours"],
             "duration_basis": "return_to_standby",

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "profile_name": "Formatsexempel — syntetiska data",
+  "runs": [
+    {
+      "started_at": "2026-01-01T00:00:00+01:00",
+      "duration_seconds": 150,
+      "energy_wh": [0.5, 2.0, 0.25],
+      "note": "Syntetiskt formatsexempel. Inte en mätning av en verklig apparat."
+    }
+  ]
+}

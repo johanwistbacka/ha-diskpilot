@@ -33,8 +33,7 @@ label_run:
     program:
       required: true
       selector:
-        select:
-          options: [P2, P3, P4, unassigned]
+        text:
     note:
       selector:
         text:
@@ -65,9 +64,63 @@ import_run:
         object:
     program:
       selector:
-        select:
-          options: [P2, P3, P4]
+        text:
     note:
       selector:
         text:
           multiline: true
+save_profile:
+  name: Save profile
+  description: Create a named profile or rename an existing profile without losing measurements.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    name:
+      required: true
+      selector:
+        text:
+    profile_id:
+      selector:
+        text:
+preview_profile_file:
+  name: Preview profile file
+  description: Validate local CSV or JSON content and return a preview without saving.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    filename:
+      required: true
+      selector:
+        text:
+    content:
+      required: true
+      selector:
+        text:
+          multiline: true
+import_profile_file:
+  name: Import profile file
+  description: Add validated complete runs from a CSV or JSON file to a named profile.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    filename:
+      required: true
+      selector:
+        text:
+    content:
+      required: true
+      selector:
+        text:
+          multiline: true
+    profile_id:
+      selector:
+        text:
+    name:
+      selector:
+        text:

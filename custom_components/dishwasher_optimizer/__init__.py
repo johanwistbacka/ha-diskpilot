@@ -5,7 +5,7 @@ from homeassistant.core import SupportsResponse
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 
-from .const import DOMAIN, PROGRAMS
+from .const import DOMAIN
 from .engine import Run, timestamp
 from .frontend import async_setup_card
 from .runtime import Runtime
@@ -63,6 +63,8 @@ def _register_services(hass):
 
     async def import_run(call):
         runtime = runtime_for(call)
+        if call.data.get("program") is not None and call.data["program"] not in runtime.profiles:
+            raise ServiceValidationError("Unknown profile")
         try:
             run = Run.from_dict(
                 Run(
@@ -82,6 +84,34 @@ def _register_services(hass):
         await runtime.store.async_save(runtime.storage_data())
         await runtime.async_refresh()
         return {"run_id": run.run_id}
+
+    async def save_profile(call):
+        try:
+            identifier = await runtime_for(call).async_save_profile(
+                call.data["name"], call.data.get("profile_id")
+            )
+            return {"profile_id": identifier}
+        except ValueError as err:
+            raise ServiceValidationError(str(err)) from err
+
+    async def preview_file(call):
+        try:
+            return await runtime_for(call).async_preview_file(
+                call.data["filename"], call.data["content"]
+            )
+        except ValueError as err:
+            raise ServiceValidationError(str(err)) from err
+
+    async def import_file(call):
+        try:
+            return await runtime_for(call).async_import_file(
+                call.data["filename"],
+                call.data["content"],
+                profile_id=call.data.get("profile_id"),
+                name=call.data.get("name"),
+            )
+        except ValueError as err:
+            raise ServiceValidationError(str(err)) from err
 
     base = {vol.Required("entry_id"): str}
     hass.services.async_register(
@@ -107,7 +137,7 @@ def _register_services(hass):
             {
                 **base,
                 vol.Required("run_id"): str,
-                vol.Required("program"): vol.In([*PROGRAMS, "unassigned"]),
+                vol.Required("program"): str,
                 vol.Optional("note"): vol.All(str, vol.Length(max=500)),
             }
         ),
@@ -124,9 +154,43 @@ def _register_services(hass):
                 vol.Required("energy_wh"): vol.All(
                     cv.ensure_list, [vol.Coerce(float)], vol.Length(min=1, max=480)
                 ),
-                vol.Optional("program"): vol.In(list(PROGRAMS)),
+                vol.Optional("program"): str,
                 vol.Optional("note"): vol.All(str, vol.Length(max=500)),
             }
+        ),
+        supports_response=SupportsResponse.ONLY,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "save_profile",
+        save_profile,
+        schema=vol.Schema(
+            {
+                **base,
+                vol.Required("name"): str,
+                vol.Optional("profile_id"): str,
+            }
+        ),
+        supports_response=SupportsResponse.ONLY,
+    )
+    file_fields = {
+        **base,
+        vol.Required("filename"): vol.All(str, vol.Length(max=255)),
+        vol.Required("content"): vol.All(str, vol.Length(max=524288)),
+    }
+    hass.services.async_register(
+        DOMAIN,
+        "preview_profile_file",
+        preview_file,
+        schema=vol.Schema(file_fields),
+        supports_response=SupportsResponse.ONLY,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "import_profile_file",
+        import_file,
+        schema=vol.Schema(
+            {**file_fields, vol.Optional("profile_id"): str, vol.Optional("name"): str}
         ),
         supports_response=SupportsResponse.ONLY,
     )

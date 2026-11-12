@@ -1,0 +1,61 @@
+Jag vill skapa programprofiler för Diskpilot från en bifogad historikexport, exempelvis en Home Assistant-CSV.
+
+Uppgifter jag fyller i:
+- Apparat och relevant sensor/entity_id:
+- Sensorns enhet (W, kW, Wh eller kWh):
+- Tidszon för min användning:
+- Kända programnamn och körningar, med datum och starttid:
+- Eventuella tillval eller kända avbrott:
+
+1. Undersök originaldata
+Identifiera kolumner, sensorer, enheter, tidszoner och tidsupplösning. En fil kan blanda timstatistik och råa tillståndsändringar. Använd sensorn jag anger. Om enhet eller betydelse är okänd ska du fråga, inte gissa. Skilj effekt (W/kW) från energi (Wh/kWh), och momentana värden från ackumulerade mätarställningar.
+
+2. Identifiera körningar
+Föreslå separata körningar och redovisa start, slut, varaktighet, energi och datakvalitet i en tabell. Redovisa hur gränserna valdes. Låg effekt i slutet kan vara en del av körningen. Återgång till viloläge bevisar inte när disken är klar. Redovisa osäkra gränser och ofullständiga körningar separat.
+
+Effektkurvan ensam fastställer inte vilket program som kördes. Använd mina uttryckliga uppgifter, anteckningar eller programbilder för etiketter. Kalla inte automatiskt en kort körning snabb eller en lång körning Eco. Om underlaget inte räcker, lämna programnamnet öppet och be mig bekräfta.
+
+3. Beräkna energi på ett kontrollerbart sätt
+Beräkna med de verkliga tidsavstånden. För tillståndsdata som gäller fram till nästa ändring kan föregående värde hållas konstant, om det är rätt tolkning av källan. Dela intervall vid relativa minutgränser. För W och sekunder är energin i Wh = W × sekunder / 3600. Konvertera kW till W vid behov. För ackumulerad kWh kan skillnader ge energi, men mätaråterställningar och luckor måste hanteras och redovisas. En enda totalenergi räcker inte för att återskapa tidsprofilen.
+
+Skilj oförändrade tillstånd från verkliga dataluckor. Fyll inte unavailable, unknown eller okända mätluckor med noll. Hitta inte på mätvärden, uppvärmningsblock, skalningsfaktorer eller programförlopp för att få en förväntad förbrukning. Kontrollera mot eventuell separat energimätare och redovisa skillnader. Rådata kan vara felaktiga även om beräkningen är korrekt.
+
+4. Skapa filer först för bekräftade profiler
+Skapa bara importfiler för fullständiga körningar vars programetikett jag uttryckligen har bekräftat i uppgifterna ovan eller i ett senare svar. Om etiketter saknas: visa förslagen och invänta mitt svar innan du skapar märkta filer. Uteslut körningar med saknad, avbruten eller otillräcklig data och förklara varför. Flera körningar av samma program kan ligga i samma fil. Behåll varje verklig körning separat; exportera inte en medelkurva som om den vore en uppmätt körning.
+
+Använd detta JSON-format och skapa en nedladdningsbar .json-fil per profil:
+{
+  "schema_version": 1,
+  "profile_name": "Det bekräftade profilnamnet",
+  "runs": [
+    {
+      "started_at": "2026-01-01T00:00:00+01:00",
+      "duration_seconds": 150,
+      "energy_wh": [0.5, 2.0, 0.25],
+      "note": "Kort beskrivning av mätkälla och hur programmet bekräftades"
+    }
+  ]
+}
+
+Siffrorna ovan är ett syntetiskt formatsexempel. Återanvänd dem inte som mina mätningar.
+
+Formatkrav:
+- schema_version ska vara heltalet 1.
+- profile_name är ett namn med 1–80 tecken på en rad.
+- runs innehåller 1–100 verkliga, kompletta körningar av samma bekräftade program.
+- started_at är verklig starttid i ISO 8601 med explicit UTC-offset eller Z. Gissa inte tidszon eller datum och skapa inga falska starttider.
+- duration_seconds är verklig varaktighet, större än 0 och högst 28800 sekunder (8 timmar).
+- energy_wh innehåller ENERGI I Wh per relativ minut från start, inte effekt i W. Antalet värden ska vara ceil(duration_seconds / 60).
+- Den sista posten innehåller bara energin för den återstående delminuten. Runda inte upp den till en hel minut.
+- Alla värden ska vara ändliga och icke-negativa, utan NaN eller Infinity. Summan får inte överstiga 50000 Wh per körning.
+- note är valfri och får vara högst 500 tecken.
+- Använd inga andra JSON-fält. Inga dubbletter av starttid. Hela filen får vara högst 512 KiB; dela annars i flera filer.
+
+Kontrollera maskinellt, om du kan, att filerna kan läsas som JSON, att längder och antal minutvärden stämmer och att summan av minutenergin överensstämmer med beräknad energi från originalet. Bevara tillräcklig precision för denna kontroll.
+
+5. Redovisa begränsningar
+För varje fil: ange ingående körningar, energiförbrukningens spridning, källan till programetiketten och eventuella kvarstående osäkerheter. Påstå inte att en profil är verifierad enbart för att filformatet är korrekt. Lägg analysen utanför importfilerna.
+
+CSV-alternativ om jag uttryckligen önskar det:
+Rubrik: started_at,offset_seconds,interval_seconds,energy_wh
+En rad per relativ minut. Upprepa körningens verkliga starttid på dess rader. offset_seconds ska vara 0, 60, 120 … i ordning. interval_seconds är 60 för alla rader utom en eventuell sista delminut (större än 0 och högst 60). Decimaltecken är punkt. Filen använder UTF-8 och kommatecken som avskiljare. Flera körningar kan ligga i samma CSV men deras etikett väljs när filen importeras.

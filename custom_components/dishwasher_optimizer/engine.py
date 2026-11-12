@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -42,6 +43,8 @@ class Run:
     issues: list[str] = field(default_factory=list)
     note: str = ""
     source: str = "live"
+    meter_energy_kwh: float | None = None
+    meter_note: str = ""
 
     def add(self, start: float, end: float, watts: float) -> None:
         """Integrate a held state, splitting at relative minute boundaries."""
@@ -66,6 +69,8 @@ class Run:
             "issues": list(self.issues),
             "note": self.note,
             "source": self.source,
+            "meter_energy_kwh": self.meter_energy_kwh,
+            "meter_note": self.meter_note,
         }
 
     @classmethod
@@ -81,10 +86,17 @@ class Run:
         run.energy_wh = [finite(value) for value in run.energy_wh]
         if min(run.energy_wh) < 0 or sum(run.energy_wh) > 50_000:
             raise ValueError("Invalid energy curve")
-        if run.program not in (None, "P2", "P3", "P4"):
+        if run.program is not None and (
+            not isinstance(run.program, str)
+            or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", run.program)
+        ):
             raise ValueError("Unknown program")
         if not isinstance(run.note, str) or len(run.note) > 500:
             raise ValueError("Note must be at most 500 characters")
+        if run.meter_energy_kwh is not None:
+            run.meter_energy_kwh = finite(run.meter_energy_kwh)
+            if run.meter_energy_kwh < 0:
+                raise ValueError("Invalid measured energy")
         if not isinstance(run.issues, list) or not all(
             isinstance(issue, str) for issue in run.issues
         ):

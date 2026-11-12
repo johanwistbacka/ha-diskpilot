@@ -1,8 +1,8 @@
 # Diskpilot
 
-Diskpilot använder sparade programprofiler för att beräkna billigaste start och elkostnad för P2, P3 och P4. Du ser alla program samtidigt. En effektsensor är valfri och behövs bara om du vill samla in nya körningar.
+Diskpilot använder egna namngivna programprofiler för att beräkna billigaste start och elkostnad. Du ser alla program samtidigt. En effektsensor är valfri och behövs bara om du vill samla in nya körningar.
 
-**Utvecklingsversion.** Kräver Home Assistant 2026.11 eller senare. Ingen automatisk start av maskinen. Programnamnen är tills vidare P2 (70 °C), P3 (snabb) och P4 (Eco). Ingen personlig mätdata eller förinställd förbrukning följer med koden.
+**Utvecklingsversion.** Kräver Home Assistant 2026.11 eller senare. Ingen automatisk start av maskinen. Du väljer profilnamnen själv. Tidigare installerade P2/P3/P4-profiler och deras underlag bevaras vid uppdatering. Ingen personlig mätdata eller förinställd förbrukning följer med koden.
 
 ## Installation och uppdateringar
 
@@ -12,7 +12,8 @@ I Home Assistant 2026.11 finns Marketplace inbyggd som efterföljare till HACS. 
 2. Installera och starta om Home Assistant.
 3. Lägg till **Diskpilot** under Inställningar → Enheter och tjänster.
 4. Välj prissensor om du vill beräkna start och kostnad. Effektsensor är valfri och kan lämnas tom för planering med sparade profiler. Lägg till den senare under Konfigurera om du vill samla nya körningar.
-5. Lägg till kortet **Diskpilot** i dashboardens kortväljare. Kortets resurs registreras automatiskt när dashboardresurser hanteras via gränssnittet.
+5. Ange eventuella profilnamn, ett per rad. En valfri energisensor för samma apparat kan användas som kontroll av totalförbrukningen.
+6. Lägg till kortet **Diskpilot** i dashboardens kortväljare. Kortets resurs registreras automatiskt när dashboardresurser hanteras via gränssnittet.
 
 Diskpilot visas under **Inställningar → Enheter och tjänster → Integrationer**. Där öppnar du integrationens inställningar för att välja eller byta sensorer.
 
@@ -43,6 +44,21 @@ Exemplet beskriver formatet och innehåller inga aktuella priser. Standard är a
 
 Din specifika avtalsprissensor behöver fortfarande kontrolleras mot detta format. Andra format kräver en adapter eller en separat sensors attribut med normaliserade intervall.
 
+## Egna profiler och filimport
+
+Öppna **Profiler och filimport** i kortet för att skapa och namnge profiler, byta namn eller ladda upp egna CSV/JSON-filer. Filen kontrolleras först och du får se antal körningar, energi, längd och den första körningens kurva. Välj profil och bekräfta märkningen innan något importeras.
+
+**Ingen AI-koppling krävs.** Importen och kostnadsberäkningen sker i Home Assistant. En rå historikexport behöver först omvandlas till det dokumenterade profilformatet. Du kan göra detta själv eller frivilligt använda instruktionen och exempelprompten i valfri AI-tjänst.
+
+- [Instruktion och filformat](docs/profile-import.md)
+- [Frivillig exempelprompt](custom_components/dishwasher_optimizer/www/profile-prompt.txt)
+- [Syntetiskt JSON-exempel](custom_components/dishwasher_optimizer/www/example-profile.json)
+- [Motsvarande CSV-exempel](custom_components/dishwasher_optimizer/www/example-profile.csv)
+
+Instruktionen och prompten nås också från kortet i den lokala installationen. Namngivna profiler kan skapas utan anslutna effekt- eller energisensorer. Högst 50 profiler per apparat. Nya körningar läggs till underlaget; inga tidigare körningar skrivs över. Dubbletter av starttid avvisas innan importen ändrar något.
+
+Vid uppdatering från den tidigare utvecklingsversionen bevaras profilernas ID och entiteter. Nya egna profil-ID:n kräver denna kodversion; återgång till äldre kod kräver en matchande säkerhetskopia av integrationsdata.
+
 ## Insamling, programbilder och rättelser
 
 När en effektsensor är ansluten börjar insamlingen automatiskt. Effekt över startgränsen (standard 5 W) startar en körning. Under vilogränsen (standard 1 W) i tio minuter bekräftar slutet. Bekräftelsetiden räknas inte in i energi eller programprofil. En lång avslutning kring 3 W behålls i mätningen.
@@ -53,13 +69,15 @@ Du kan fotografera programvalet vid start och senare lämna bilden tillsammans m
 
 Körningar lagras lokalt med id, starttid, tid till vila, energi per minut, programetikett, anteckning och kvalitetsmarkeringar. Första körningen efter installation kan vara påbörjad redan när insamlingen startar. Den märks då ofullständig. Avbrott, omstarter, byte av effektmätare och kända dataluckor utesluts från inlärning. När effektmätningen är avstängd fortsätter planeringen med de sparade profilerna. Oförändrade sensortillstånd samplas var 30:e sekund. Om en sensor fastnar utan att rapportera `unavailable` kan Diskpilot inte själv upptäcka det.
 
+En valfri ackumulerad energisensor i Wh eller kWh används som kontroll vid registrerade körningar. Mätarställningar jämförs vid start och första återgång till vila. Saknade värden eller en mätaråterställning redovisas separat och ersätter inte effektkurvan. Uppdateringsintervall kan ge skillnader mellan energimätaren och den integrerade kurvan.
+
 Som första underlag räcker en märkt körning per program. Kortet visar när uppskattningen bara bygger på en körning. Fler körningar förbättrar medelprofilen. Energiförbrukningens observerade min/max och antal mätningar finns som sensorattribut. Detta är ingen statistisk garanti.
 
 ## Dashboard-kort
 
-Kortet ingår i integrationen och uppdateras tillsammans med den. Det visar alla tre programmens kostnad, bästa start, återgång till vila, energi, underlag och besparing mot start nu. Kortet kan också märka de fem senaste körningarna. Äldre körningar nås via åtgärderna nedan.
+Kortet ingår i integrationen och uppdateras tillsammans med den. Det visar alla profilernas kostnad, bästa start, återgång till vila, energi, underlag och besparing mot start nu. När effektmätning är aktiverad kan kortet också märka de fem senaste körningarna. Äldre körningar nås via åtgärderna nedan.
 
-**Åter i vila betyder inte verifierad färdigtid för disken.** Detta behöver kontrolleras mot maskinens färdigindikering. Kostnaden beräknas från effektsensorn och kan inte verifiera om sensorn mäter hela maskinens förbrukning.
+**Åter i vila betyder inte verifierad färdigtid för disken.** Detta behöver kontrolleras mot maskinens färdigindikering. Kostnaden beräknas från profilens uppmätta tidskurva och kan inte verifiera om sensorn mäter hela maskinens förbrukning.
 
 Enkel kortkonfiguration:
 
@@ -77,8 +95,18 @@ Alla åtgärder använder `entry_id` för rätt Diskpilot-instans. Det finns som
 | Åtgärd | Indata | Resultat |
 |---|---|---|
 | `dishwasher_optimizer.get_runs` | `entry_id`, valfria `offset` och `limit` (1–100) | Svar med körningar, inklusive minutenergi i Wh |
-| `dishwasher_optimizer.label_run` | `entry_id`, `run_id`, `program` (`P2`, `P3`, `P4` eller `unassigned`), valfri `note` | Uppdaterar etikett och räknar om profiler |
+| `dishwasher_optimizer.label_run` | `entry_id`, `run_id`, `program` (profilens ID eller `unassigned`), valfri `note` | Uppdaterar etikett och räknar om profiler |
 | `dishwasher_optimizer.import_run` | `entry_id`, `started_at` (ISO med tidszon), `duration_seconds`, `energy_wh`, valfritt `program` och `note` | Svar med nytt körnings-id |
+
+Profilerna med namn och stabila ID:n finns i statusentitetens attribut `profiles`. De äldre P2/P3/P4-ID:na fungerar fortsatt i befintliga installationer.
+
+| Åtgärd | Indata | Resultat |
+|---|---|---|
+| `dishwasher_optimizer.save_profile` | `entry_id`, `name`, valfritt `profile_id` för namnbyte | Profilens ID; befintliga körningar bevaras |
+| `dishwasher_optimizer.preview_profile_file` | `entry_id`, `filename`, `content` | Granskningsdata, utan att spara |
+| `dishwasher_optimizer.import_profile_file` | Samma filuppgifter och antingen `profile_id` eller `name` | Sparar kontrollerade körningar till profilen |
+
+Filinnehåll öppnas aldrig som filväg eller URL. Högst 512 KiB och 100 körningar per fil. Felaktiga filer eller redan importerade starttider avvisas för hela omgången.
 
 Importformatet kräver en energipost i Wh per relativ minut, inklusive en eventuell sista delminut. Antalet poster måste vara `ceil(duration_seconds/60)`. Importerade körningar kan vara omärkta. Återimport av samma starttid avvisas. Maximalt åtta timmar per körning.
 

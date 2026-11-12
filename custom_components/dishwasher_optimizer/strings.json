@@ -4,11 +4,13 @@
     "step": {
       "user": {
         "title": "Diskpilot",
-        "description": "Plan with saved program profiles. A power sensor is optional and only needed to collect new runs; add one later if desired.",
+        "description": "Select your price source and optional meters. Name profiles here or add them later in the card. Import your own CSV/JSON files without an AI connection.",
         "data": {
           "name": "Appliance name",
           "power_entity": "Power sensor (optional)",
-          "price_entity": "Price sensor (optional)"
+          "price_entity": "Price sensor (optional)",
+          "energy_entity": "Appliance energy meter (optional, cumulative Wh/kWh)",
+          "profile_names": "Profile names (optional, one per line)"
         }
       }
     },
@@ -16,7 +18,9 @@
       "invalid_power": "Select a power sensor measured in W or kW.",
       "invalid_price": "The price sensor does not exist.",
       "invalid_settings": "Check the fields, threshold order, currency code and positive price multiplier.",
-      "power_in_use": "Another Diskpilot entry is already collecting from this power sensor."
+      "power_in_use": "Another Diskpilot entry is already collecting from this power sensor.",
+      "invalid_energy": "Select a cumulative Wh or kWh energy sensor for the same appliance.",
+      "invalid_profiles": "Enter up to 50 distinct profile names, 1–80 characters each, one per line."
     },
     "abort": {
       "already_configured": "This power sensor is already configured."
@@ -39,7 +43,8 @@
           "start_w": "Activity starts above (W)",
           "stop_w": "Standby below (W)",
           "stop_minutes": "Confirm standby for (minutes)",
-          "power_entity": "Power sensor (optional)"
+          "power_entity": "Power sensor (optional)",
+          "energy_entity": "Appliance energy meter (optional, cumulative Wh/kWh)"
         }
       }
     },
@@ -47,7 +52,8 @@
       "invalid_power": "Select a power sensor measured in W or kW.",
       "invalid_price": "The price sensor does not exist.",
       "invalid_settings": "Check the fields, threshold order, currency code and positive price multiplier.",
-      "power_in_use": "Another Diskpilot entry is already collecting from this power sensor."
+      "power_in_use": "Another Diskpilot entry is already collecting from this power sensor.",
+      "invalid_energy": "Select a cumulative Wh or kWh energy sensor for the same appliance."
     }
   }
 }

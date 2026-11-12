@@ -4,11 +4,13 @@
     "step": {
       "user": {
         "title": "Diskpilot",
-        "description": "Planera med sparade programprofiler och valfri prissensor. Effektsensor behövs bara om du vill samla nya körningar och kan läggas till senare.",
+        "description": "Välj prissensor och valfria mätare. Namnge dina profiler här eller lägg till dem senare i kortet. Egna CSV/JSON-filer kan importeras utan AI-koppling.",
         "data": {
           "name": "Diskmaskinens namn",
           "power_entity": "Effektsensor (valfri)",
-          "price_entity": "Prissensor (valfri)"
+          "price_entity": "Prissensor (valfri)",
+          "energy_entity": "Energisensor för apparaten (valfri, ackumulerad Wh/kWh)",
+          "profile_names": "Profilnamn (valfritt, ett namn per rad)"
         }
       }
     },
@@ -16,7 +18,9 @@
       "invalid_power": "Välj en effektsensor med enheten W eller kW.",
       "invalid_price": "Prissensorn finns inte.",
       "invalid_settings": "Kontrollera fälten. Startgränsen måste vara högre än vilogränsen och omräkningsfaktorn måste vara positiv.",
-      "power_in_use": "Effektsensorn används redan av en annan Diskpilot-instans."
+      "power_in_use": "Effektsensorn används redan av en annan Diskpilot-instans.",
+      "invalid_energy": "Välj en energisensor i Wh eller kWh för samma apparat.",
+      "invalid_profiles": "Ange högst 50 olika profilnamn med 1–80 tecken, ett per rad."
     },
     "abort": {
       "already_configured": "Effektsensorn används redan av Diskpilot."
@@ -39,7 +43,8 @@
           "start_w": "Aktivitet börjar över (W)",
           "stop_w": "Viloläge under (W)",
           "stop_minutes": "Bekräfta viloläge i (minuter)",
-          "power_entity": "Effektsensor (valfri)"
+          "power_entity": "Effektsensor (valfri)",
+          "energy_entity": "Energisensor för apparaten (valfri, ackumulerad Wh/kWh)"
         }
       }
     },
@@ -47,7 +52,8 @@
       "invalid_power": "Välj en effektsensor med enheten W eller kW.",
       "invalid_price": "Prissensorn finns inte.",
       "invalid_settings": "Kontrollera fälten. Startgränsen måste vara högre än vilogränsen och omräkningsfaktorn måste vara positiv.",
-      "power_in_use": "Effektsensorn används redan av en annan Diskpilot-instans."
+      "power_in_use": "Effektsensorn används redan av en annan Diskpilot-instans.",
+      "invalid_energy": "Välj en energisensor i Wh eller kWh för samma apparat."
     }
   }
 }

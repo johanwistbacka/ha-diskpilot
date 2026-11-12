@@ -8,6 +8,7 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import DEFAULTS, DOMAIN
+from .profile_files import profile_name
 
 
 def settings_schema(values, *, setup=False):
@@ -24,9 +25,20 @@ def settings_schema(values, *, setup=False):
     )
     fields[
         vol.Optional(
+            "energy_entity", description={"suggested_value": values.get("energy_entity") or None}
+        )
+    ] = selector.EntitySelector(
+        selector.EntitySelectorConfig(domain="sensor", device_class="energy")
+    )
+    fields[
+        vol.Optional(
             "price_entity", description={"suggested_value": values.get("price_entity") or None}
         )
     ] = selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor"))
+    if setup:
+        fields[vol.Optional("profile_names")] = selector.TextSelector(
+            selector.TextSelectorConfig(multiline=True)
+        )
     if not setup:
         for key in ("price_attributes", "start_key", "end_key", "value_key", "currency"):
             fields[vol.Required(key, default=values[key])] = str
@@ -53,6 +65,10 @@ def validate_settings(hass, data, entry_id=None):
                 return {"base": "power_in_use"}
     if data.get("price_entity") and hass.states.get(data["price_entity"]) is None:
         return {"price_entity": "invalid_price"}
+    if data.get("energy_entity"):
+        energy = hass.states.get(data["energy_entity"])
+        if energy is None or energy.attributes.get("unit_of_measurement") not in ("Wh", "kWh"):
+            return {"energy_entity": "invalid_energy"}
     if (
         not all(math.isfinite(data[k]) for k in ("price_multiplier", "start_w", "stop_w"))
         or not 0 < data["price_multiplier"] <= 1000
@@ -78,6 +94,17 @@ class DiskpilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             data = {**DEFAULTS, **user_input}
             errors = validate_settings(self.hass, data)
+            try:
+                names = [
+                    profile_name(name)
+                    for name in data.pop("profile_names", "").splitlines()
+                    if name.strip()
+                ]
+                if len(names) > 50 or len({name.casefold() for name in names}) != len(names):
+                    raise ValueError("Invalid profile names")
+                data["initial_profile_names"] = names
+            except ValueError:
+                errors["profile_names"] = "invalid_profiles"
             if not errors:
                 return self.async_create_entry(title=data["name"], data=data)
         return self.async_show_form(
@@ -102,6 +129,7 @@ class DiskpilotOptionsFlow(config_entries.OptionsFlow):
             user_input = {
                 **user_input,
                 "power_entity": user_input.get("power_entity", ""),
+                "energy_entity": user_input.get("energy_entity", ""),
                 "price_entity": user_input.get("price_entity", ""),
             }
             errors = validate_settings(

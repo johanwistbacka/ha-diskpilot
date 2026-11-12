@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="sv">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Egna profiler och filimport · Diskpilot</title>
+<style>
+body{font:17px/1.6 system-ui,sans-serif;max-width:780px;margin:36px auto;padding:0 20px;color:#20282c;background:#fff}h1,h2{line-height:1.25}h2{margin-top:2em}a{color:#006c92}button{font:inherit;background:#006c92;color:white;padding:10px 18px;border:0;border-radius:8px;min-height:44px;cursor:pointer}textarea{box-sizing:border-box;width:100%;height:440px;font:14px/1.6 ui-monospace,monospace;padding:14px;border:1px solid #68777e;border-radius:8px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#eef4f6;padding:16px;border-radius:8px}code{overflow-wrap:anywhere}.note{padding:14px 18px;background:#eef4f6;border-left:4px solid #006c92}button:focus-visible,a:focus-visible,textarea:focus-visible{outline:3px solid #ba6100;outline-offset:3px}@media(prefers-color-scheme:dark){body{background:#182025;color:#e8eef0}a{color:#75d1ef}.note,pre{background:#26363d}textarea{background:#1d2a31;color:#e8eef0}}
+</style>
+<main>
+<h1>Egna profiler och filimport</h1>
+<p>En profil är ett program du vill jämföra, till exempel Eco, Snabb eller 70 grader. Du väljer namnen själv. Underlaget består av en eller flera uppmätta körningar av samma program.</p>
+<p class="note"><strong>Du laddar upp dina egna filer.</strong> Diskpilot läser dem i din Home Assistant. Ingen AI-koppling, AI-nyckel eller AI-prenumeration krävs. Exempelprompten nedan är ett frivilligt hjälpmedel för att bearbeta en historikexport i en tjänst du själv väljer.</p>
+<h2>Så importerar du</h2>
+<ol>
+<li>Öppna <strong>Profiler och filimport</strong> i Diskpilot-kortet.</li>
+<li>Välj en egen JSON- eller CSV-fil enligt formatet nedan. En rå historikexport behöver först omvandlas till detta format.</li>
+<li>Granska antal körningar, längd, energi och kurvan för filens första körning.</li>
+<li>Välj en befintlig profil eller ange ett namn för en ny.</li>
+<li>Bekräfta att körningarna hör till rätt program och välj <strong>Importera körningarna</strong>.</li>
+</ol>
+<p>Nya körningar läggs till profilens befintliga underlag. Gamla körningar skrivs inte över. Samma starttid kan inte importeras två gånger, heller inte under ett annat profilnamn. Om en körning redan finns ska dess märkning ändras i stället.</p>
+<p>Du kan skapa tomma profiler och byta namn på dem i kortet. Namnbytet bevarar underlaget. I installationen kan du också ange flera profilnamn, ett per rad.</p>
+<h2>Förbered din historikexport</h2>
+<p>Exportera den relevanta apparatens effektdata och ange vilken enhet sensorn använder. Skriv upp programval, datum och starttid. En programbild kan hjälpa dig att bekräfta etiketten. Fördröjd start gör att bildens tid inte alltid är samma som körningens start.</p>
+<p>En export kan innehålla flera sensorer och både rådata och timstatistik. Rätt sensor och enheter måste identifieras innan energi beräknas. En effektkurva räcker inte för att säkert avgöra programnamnet. Körningar med okända program eller dataluckor bör utredas separat innan de används som profilunderlag.</p>
+<h2>Frivillig exempelprompt</h2>
+<p>Bifoga historikfilen i valfri AI-tjänst och använd texten nedan. Fyll i sensorn, enheten och de program du faktiskt känner till. Granska resultatet före import. Filkontrollen bekräftar formatet, inte att programetiketten eller mätningen är korrekt.</p>
+<p><button id="copy" type="button">Kopiera exempelprompt</button> <a href="profile-prompt.txt" download>Hämta prompten som text</a></p>
+<p id="message" role="status" aria-live="polite"></p>
+<label for="prompt">Exempelprompt</label>
+<textarea id="prompt" readonly aria-label="Exempelprompt">Läser prompten…</textarea>
+<h2>JSON-format</h2>
+<p><a href="example-profile.json" download>Hämta syntetiskt JSON-exempel</a> · <a href="example-profile.csv" download>Hämta motsvarande CSV-exempel</a></p>
+<p>Exemplen beskriver bara filformatet. De är inte verkliga programprofiler.</p>
+<pre>{
+  "schema_version": 1,
+  "profile_name": "Eco",
+  "runs": [
+    {
+      "started_at": "2026-01-01T00:00:00+01:00",
+      "duration_seconds": 150,
+      "energy_wh": [0.5, 2.0, 0.25],
+      "note": "Syntetiskt formatsexempel"
+    }
+  ]
+}</pre>
+<ul>
+<li><code>started_at</code>: verklig starttid med tidszon, exempelvis <code>+01:00</code> eller <code>Z</code>.</li>
+<li><code>duration_seconds</code>: verklig längd, större än noll och högst åtta timmar.</li>
+<li><code>energy_wh</code>: energi i <strong>Wh per relativ minut</strong>, inte effekt i W. Antalet poster ska vara <code>ceil(duration_seconds / 60)</code>. Den sista posten avser bara eventuell återstående delminut.</li>
+<li><code>note</code> är valfri, högst 500 tecken. Inga andra fält stöds i körningarna.</li>
+</ul>
+<p>Högst 100 körningar och 512 KiB per fil. Energivärden måste vara ändliga, icke-negativa och sammanlagt högst 50000 Wh per körning. Flera verkliga körningar kan ligga i samma profilfil; skriv inte en medelkurva som om den vore en verklig körning.</p>
+<h2>CSV-format</h2>
+<pre>started_at,offset_seconds,interval_seconds,energy_wh
+2026-01-01T00:00:00+01:00,0,60,0.5
+2026-01-01T00:00:00+01:00,60,60,2.0
+2026-01-01T00:00:00+01:00,120,30,0.25</pre>
+<p>UTF-8, kommatecken som avskiljare och punkt som decimaltecken. Rubrikerna ska stämma exakt. Upprepa körningens starttid på varje rad. Minuternas start ska vara 0, 60, 120 … i ordning, utan luckor eller överlapp. Endast den sista minuten får vara kortare än 60 sekunder.</p>
+<h2>Vad gör Diskpilot med filen?</h2>
+<p>Varje körning sparas separat. Profilens medelkurva beräknas från märkta, fullständiga körningar och används tillsammans med vald prissensor. AI används inte för import, validering eller kostnadsberäkning. Profilerna ligger kvar om du byter prissensor eller avtal.</p>
+<p>Återgång till viloläge bevisar inte när apparaten är färdig. Energisensorn är en valfri kontroll av totalförbrukningen; effektkurvan ger tidsfördelningen. Mätdata, programetiketter och den valda prisberäkningen behöver fortfarande vara rätt.</p>
+</main>
+<script type="module">
+const prompt=document.querySelector('#prompt'),message=document.querySelector('#message');
+try {const response=await fetch('./profile-prompt.txt');if(!response.ok)throw new Error('Prompten kunde inte läsas');prompt.value=await response.text();}
+catch(error){prompt.value='Öppna länken till textfilen ovan för att läsa prompten.';message.textContent=error.message;}
+document.querySelector('#copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(prompt.value);message.textContent='Prompten är kopierad.';}catch{prompt.focus();prompt.select();message.textContent='Markera och kopiera texten manuellt.';}});
+</script>
+</html>

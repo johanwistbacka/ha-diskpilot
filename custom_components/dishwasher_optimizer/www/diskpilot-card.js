@@ -1,5 +1,7 @@
 /* Diskpilot: bundled Home Assistant card, no external assets or dependencies. */
-const PROGRAMS = { P2: "P2 · 70 °C", P3: "P3 · Snabb", P4: "P4 · Eco" };
+const managerUrl = new URL("./profile-manager.js", import.meta.url);
+managerUrl.search = new URL(import.meta.url).search;
+const { renderProfileControls } = await import(managerUrl.href);
 const STATUS = {
   needs_labelled_run: "Behöver en märkt körning",
   needs_saved_profile: "Behöver en sparad programprofil",
@@ -45,10 +47,22 @@ class DiskpilotCard extends HTMLElement {
   }
   getCardSize() { return 8; }
   getGridOptions() { return { columns: 12, rows: 8, min_columns: 6 }; }
+  async service(entryId, service, data) {
+    const result = await this._hass.callWS({type:"call_service",domain:"dishwasher_optimizer",service,service_data:{entry_id:entryId,...data},return_response:true});
+    return result.response;
+  }
   render() {
     if (!this._config || !this._hass) return;
     if (!this.shadowRoot) this.attachShadow({ mode: "open" });
     const root = this.shadowRoot;
+    const card = root.querySelector("ha-card") || el("ha-card");
+    const active = root.activeElement;
+    const editing = active?.matches('input[type="text"]') ? {
+      label: active.getAttribute("aria-label"),
+      start: active.selectionStart,
+      end: active.selectionEnd,
+      direction: active.selectionDirection,
+    } : null;
     root.replaceChildren();
     const style = el("style");
     style.textContent = `
@@ -56,38 +70,45 @@ class DiskpilotCard extends HTMLElement {
       h2 { font-size: 21px; margin: 0 0 6px; font-weight: 600; }
       h3 { font-size: 16px; margin: 24px 0 8px; }
       p { margin: 6px 0 14px; line-height: 1.5; }
-      .muted, .note { color: var(--secondary-text-color); font-size: 13px; }
+      .muted, .note { color: var(--secondary-text-color); font-size: 13px; overflow-wrap:anywhere; }
       .program { padding: 14px 0; border-bottom: 1px solid var(--divider-color); }
       .heading { display: flex; gap: 12px; justify-content: space-between; align-items: baseline; }
+      .heading strong { min-width:0;overflow-wrap:anywhere; }
       .cost { font-size: 22px; font-weight: 600; white-space: nowrap; }
       dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 10px 0 0; }
       dt { color: var(--secondary-text-color); font-size: 12px; } dd { margin: 2px 0 0; font-size: 14px; }
       .run { padding: 10px 0; border-bottom: 1px solid var(--divider-color); }
       .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
-      select, button { font: inherit; font-size: 14px; min-height: 44px; padding: 8px 10px; border-radius: 8px; }
+      select, button, input[type=text] { font: inherit; font-size: 14px; min-height: 44px; padding: 8px 10px; border-radius: 8px; box-sizing:border-box;max-width:100%; }
+      input[type=text] { background:var(--card-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color); }
+      details { margin:18px 0; } summary { cursor:pointer;min-height:44px;line-height:44px; } a {color:var(--primary-color);}
+      .review { display:flex;align-items:center;gap:10px;min-height:44px;margin:12px 0; } .review input {width:22px;height:22px;flex-shrink:0;}
+      .preview { padding:12px;border:1px solid var(--divider-color);border-radius:8px;margin:12px 0; } svg {width:100%;height:70px;color:var(--primary-color);}
       select { background: var(--card-background-color); color: var(--primary-text-color); border: 1px solid var(--divider-color); }
       button { background: var(--primary-color); color: var(--text-primary-color, white); border: 0; cursor: pointer; }
-      button:disabled { opacity: .6; cursor: wait; } button:focus-visible, select:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 3px; }
+      button:disabled { opacity: .6; cursor: wait; } button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 3px; }
       .error { color: var(--error-color); } .message { margin: 8px 0; min-height: 20px; }
       @media (max-width: 350px) { ha-card { padding: 14px; } dl { grid-template-columns: 1fr; } }
     `;
     root.append(style);
-    const card = el("ha-card");
+    card.replaceChildren();
     root.append(card);
     card.append(el("h2", this._config.title || "Diskpilot"));
     const list = statuses(this._hass);
     const status = this._config.entry_id ? list.find(s => s.attributes.diskpilot_entry_id === this._config.entry_id) : list[0];
     if (!status) { card.append(el("p", "Lägg till Diskpilot-integrationen för din diskmaskin.")); return; }
     const entryId = status.attributes.diskpilot_entry_id;
+    const profiles = status.attributes.profiles || [];
     const states = Object.values(this._hass.states).filter(s => s.attributes.diskpilot_entry_id === entryId && s.attributes.program);
     const running = status.state === "planner" ? "Planering med sparade profiler · effektmätning avstängd" : status.state === "running" ? "Körning pågår" : status.state === "source_unavailable" ? "Effektsensorn är inte tillgänglig" : "Redo att registrera nästa körning";
     card.append(el("p", running, "muted"));
-    for (const program of Object.keys(PROGRAMS)) {
+    for (const profile of profiles) {
+      const program=profile.id;
       const sensor = states.find(s => s.attributes.program === program);
       const a = sensor?.attributes || {};
       const section = el("section", undefined, "program");
       const heading = el("div", undefined, "heading");
-      heading.append(el("strong", PROGRAMS[program]));
+      heading.append(el("strong", profile.name));
       const cost = sensor && !["unknown", "unavailable"].includes(sensor.state) ? Number(sensor.state) : null;
       heading.append(el("span", cost !== null ? `${number(cost)} ${a.currency || "SEK"}` : "—", "cost"));
       section.append(heading);
@@ -104,6 +125,16 @@ class DiskpilotCard extends HTMLElement {
       card.append(section);
     }
     card.append(el("p", "Sluttiden avser återgång till viloläge. När disken är klar behöver verifieras separat.", "note"));
+    if(!profiles.length)card.append(el("p","Lägg till egna profiler och importera deras körningar för att börja planera."));
+    renderProfileControls.call(this,card,entryId,profiles,el,number);
+    // HA can refresh these sensors while the user is typing a profile name.
+    if (editing?.label) {
+      const replacement = [...root.querySelectorAll('input[type="text"]')].find(input => input.getAttribute("aria-label") === editing.label);
+      if (replacement) {
+        replacement.focus({preventScroll:true});
+        replacement.setSelectionRange(editing.start, editing.end, editing.direction);
+      }
+    }
     if (status.state === "planner") return;
     card.append(el("h3", "Senaste körningarna"));
     const message = el("div", this._message || "", "message");
@@ -118,7 +149,7 @@ class DiskpilotCard extends HTMLElement {
       const controls = el("div", undefined, "controls");
       const select = el("select");
       select.setAttribute("aria-label", `Program för körningen ${time(run.started_at, this._hass)}`);
-      for (const [value, label] of Object.entries({ unassigned: "Ej märkt", ...PROGRAMS })) {
+      for (const [value, label] of [["unassigned","Ej märkt"],...profiles.map(p=>[p.id,p.name])]) {
         const option = el("option", label); option.value = value; select.append(option);
       }
       select.value = this._drafts?.[run.run_id] || run.program || "unassigned";

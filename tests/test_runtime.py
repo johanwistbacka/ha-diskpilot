@@ -159,6 +159,32 @@ async def test_card_yaml_resources_are_not_overwritten(hass):
     assert resources.async_items() == [{"url": "/existing.js", "type": "module"}]
 
 
+async def test_card_update_replaces_stale_url_and_keeps_other_resources(hass):
+    resources = ResourceStorageCollection(
+        hass, SimpleNamespace(async_load=AsyncMock(return_value={}))
+    )
+    hass.data["lovelace"] = SimpleNamespace(resources=resources)
+    old = await resources.async_create_item({"res_type": "module", "url": CARD_PATH + "?v=0.0.0"})
+    other = await resources.async_create_item({"res_type": "module", "url": "/other-card.js"})
+    with (
+        patch.object(
+            type(hass),
+            "http",
+            create=True,
+            new=SimpleNamespace(async_register_static_paths=AsyncMock()),
+        ),
+        patch(
+            "custom_components.dishwasher_optimizer.frontend._card_revision",
+            return_value="changed",
+        ),
+    ):
+        await async_setup_card(hass)
+    items = {item["id"]: item for item in resources.async_items()}
+    assert len(items) == 2
+    assert items[old["id"]]["url"].endswith("&rev=changed")
+    assert items[other["id"]] == other
+
+
 async def test_real_service_registry_label_import_export(hass):
     e = entry()
     runtime = Runtime(hass, e)
