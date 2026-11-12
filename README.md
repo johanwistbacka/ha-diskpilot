@@ -2,14 +2,14 @@
 
 Diskpilot använder egna namngivna programprofiler för att beräkna billigaste start och elkostnad. Du ser alla program samtidigt. En effektsensor är valfri och behövs bara om du vill samla in nya körningar.
 
-**Beta 0.1.0-beta.1.** Kräver Home Assistant 2026.11 eller senare och är testad lokalt med 2026.11.1. Ingen automatisk start av maskinen. Du väljer profilnamnen själv. Tidigare installerade P2/P3/P4-profiler och deras underlag bevaras vid uppdatering. Ingen personlig mätdata eller förinställd förbrukning följer med koden. Installation i användarens produktionsmiljö är ännu inte verifierad.
+**Beta 0.1.0-beta.2.** Kräver Home Assistant 2026.11 eller senare och är testad lokalt med 2026.11.1. Ingen automatisk start av maskinen. Du väljer profilnamnen själv. Tidigare installerade P2/P3/P4-profiler och deras underlag bevaras vid uppdatering. Ingen personlig mätdata eller förinställd förbrukning följer med koden. Installation i användarens produktionsmiljö är ännu inte verifierad.
 
 ## Installation och uppdateringar
 
 I Home Assistant 2026.11 finns Marketplace inbyggd som efterföljare till HACS. Projektet använder samma struktur för en custom integration och ett publikt GitHub-repo.
 
 1. Lägg till `https://github.com/johanwistbacka/ha-diskpilot` som eget repo i Marketplace, typ **Integration**.
-2. Aktivera repots **Pre-release**-val för att se betaversioner. Välj **0.1.0-beta.1**, installera och starta om Home Assistant.
+2. Aktivera repots **Pre-release**-val för att se betaversioner. Välj **0.1.0-beta.2**, installera och starta om Home Assistant.
 3. Lägg till **Diskpilot** under Inställningar → Enheter och tjänster.
 4. Välj prissensor om du vill beräkna start och kostnad. Effektsensor är valfri och kan lämnas tom för planering med sparade profiler. Lägg till den senare under Konfigurera om du vill samla nya körningar.
 5. Ange eventuella profilnamn, ett per rad. En valfri energisensor för samma apparat kan användas som kontroll av totalförbrukningen.
@@ -19,11 +19,13 @@ Diskpilot visas under **Inställningar → Enheter och tjänster → Integration
 
 Manuell installation: kopiera `custom_components/dishwasher_optimizer` till din Home Assistant-konfiguration under `custom_components/` och starta om.
 
-Den numrerade betan finns under [GitHub Releases](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.1) och är markerad som pre-release. Marketplace/HACS hämtar integrationsfilerna från den valda taggen; någon separat ZIP-asset krävs inte. Huvudgrenen används för fortsatt utveckling. Se [ändringsloggen](CHANGELOG.md).
+Den numrerade betan finns under [GitHub Releases](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.2) och är markerad som pre-release. Marketplace/HACS hämtar integrationsfilerna från den valda taggen; någon separat ZIP-asset krävs inte. Huvudgrenen används för fortsatt utveckling. Se [ändringsloggen](CHANGELOG.md).
 
 ### Säkerhetskopia och återgång
 
 Ta en Home Assistant-säkerhetskopia före installation eller uppdatering, inklusive konfigurationens `.storage`, och spara återställningsnyckeln. Lokal historik och profiler ligger i `.storage`, utanför integrationskoden, och ersätts inte vid en normal koduppdatering.
+
+Återgång från beta.2 till beta.1: sparade profiler och körningar har samma format, men registreringsutkast stöds inte i beta.1. Spara eller kasta utkast före återgång och behåll säkerhetskopian.
 
 Om problem uppstår kan Diskpilot inaktiveras under Enheter och tjänster och Home Assistant startas om. Om gränssnittet inte går att nå, använd din befintliga filåtkomst för att flytta integrationsmappen `custom_components/dishwasher_optimizer` ut ur `custom_components` och starta om. Behåll `.storage` för en senare ominstallation. Återställ säkerhetskopian om hela installationen behöver återställas. Återgång till äldre utvecklingskod kräver en matchande säkerhetskopia när dess lagringsformat inte stöder egna profil-ID:n.
 
@@ -67,6 +69,8 @@ Vid uppdatering från den tidigare utvecklingsversionen bevaras profilernas ID o
 
 ## Insamling, programbilder och rättelser
 
+Från beta.2 finns **Registrera profil** i kortet: registrera från nu med manuellt eller tidsbestämt avslut, eller välj ett tidigare intervall ur Home Assistants Recorder. Båda flödena ger ett separat utkast med kurva och justerbara gränser. Körningen tillförs först efter granskning och bekräftelse, till en ny eller befintlig profil. Se [registreringsflödet och begränsningarna](docs/profile-registration.md).
+
 När en effektsensor är ansluten börjar insamlingen automatiskt. Effekt över startgränsen (standard 5 W) startar en körning. Under vilogränsen (standard 1 W) i tio minuter bekräftar slutet. Bekräftelsetiden räknas inte in i energi eller programprofil. En lång avslutning kring 3 W behålls i mätningen.
 
 Märk programmet under **Senaste körningarna** i kortet. Märkningen går att ändra eller ta bort. Varje programprofil räknas om från sina märkta, fullständiga körningar. Omärkta körningar används inte för att gissa programnamn.
@@ -92,9 +96,11 @@ type: custom:diskpilot-card
 title: Diskmaskinen
 ```
 
-Har du flera maskiner väljer du vilken i kortets visuella inställningar. YAML-baserade dashboardresurser ändras inte automatiskt. Lägg i så fall till modulen `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.1` bland dina resurser.
+Har du flera maskiner väljer du vilken i kortets visuella inställningar. YAML-baserade dashboardresurser ändras inte automatiskt. Lägg i så fall till modulen `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.2` bland dina resurser.
 
 ## Åtgärder för export, import och märkning
+
+Profilhantering, filimport, export och registreringsåtgärder kräver en inloggad Home Assistant-administratör. Interna system- och automationsanrop utan användarkontext följer Home Assistants vanliga behörighetsmodell. Kostnadsentiteter kan visas enligt dashboardens vanliga entitetsbehörigheter.
 
 Alla åtgärder använder `entry_id` för rätt Diskpilot-instans. Det finns som attribut `diskpilot_entry_id` på integrationens sensorer.
 
@@ -138,8 +144,11 @@ python3.14 -m venv .venv
 .venv/bin/ruff check .
 .venv/bin/ruff format --check .
 .venv/bin/pytest -q
+node --test tests/frontend-registration-time.mjs
 ```
 
 Testerna kontrollerar energi, prisgränser, negativa priser, dataluckor, lagring/omstart, etikettändringar, åtgärder och kortregistrering med riktiga Home Assistant-klasser. Testerna ersätter inte en provinstallation i din Home Assistant.
+
+Registreringstesterna omfattar också oregelbundna effektkurvor jämförda med en separat integrationsmodell, samtidiga start-/spara-anrop, gamla timeranrop och avstängning under ett väntande anrop. SQLite-tester använder riktiga Recorder-tabellrader för att kontrollera UTC och avbrott efter omstart i flera tidszoner. JavaScript-testerna kräver Node.js 22 eller senare och kontrollerar lokala datum, sommartidsluckor och upprepade klockslag, inklusive halvtimmesomställningar. De körs även i GitHub-kontrollerna.
 
 Officiella referenser: [Marketplace-repon](https://contributors.home-assistant.io/marketplace/reference/repository-structure/), [egna kort](https://contributors.home-assistant.io/frontend/custom-ui/card/), [Home Assistant 2026.11](https://www.home-assistant.io/blog/2026/11/04/release-202611/).

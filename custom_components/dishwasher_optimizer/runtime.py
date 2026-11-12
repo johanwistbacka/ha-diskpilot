@@ -9,13 +9,18 @@ from uuid import uuid4
 
 from homeassistant.core import callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
+from homeassistant.helpers.event import (
+    async_track_point_in_utc_time,
+    async_track_state_change_event,
+    async_track_time_interval,
+)
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import DEFAULTS, DOMAIN, PROGRAMS
 from .engine import Collector, Run, finite, optimise, parse_prices, profile_for
 from .profile_files import import_summary, parse_profile_file, profile_name
+from .registration import Registration, history_registration, power_value
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,10 +48,20 @@ class Runtime:
         self._last_save_request = float("-inf")
         self._energy_start = None
         self._energy_end = None
+        self.registration = None
+        self._registration_lock = asyncio.Lock()
+        self._registration_timer = None
 
     async def async_start(self):
         """Recover safely; never teach from an interrupted measurement."""
         saved = await self.store.async_load() or {}
+        if saved.get("registration"):
+            self.registration = Registration.from_dict(saved["registration"])
+            if self.registration.stage == "recording":
+                # Resume as a reviewable draft, never silently bridge a restart.
+                self.registration.end_at = self.registration.observed_end
+                self.registration.stage = "review"
+                self.registration.reason = "interrupted"
         self.runs = [Run.from_dict(row) for row in saved.get("runs", [])]
         if "profiles" in saved:
             if not isinstance(saved["profiles"], dict) or len(saved["profiles"]) > 50:
@@ -59,7 +74,7 @@ class Runtime:
             if "interrupted" not in run.issues:
                 run.issues.append("interrupted")
             self.runs.append(run)
-        if "profiles" not in saved or saved.get("active"):
+        if "profiles" not in saved or saved.get("active") or saved.get("registration"):
             await self.store.async_save(self.storage_data())
         self._bind_states()
         self._unsub.append(async_track_time_interval(self.hass, self._tick, timedelta(seconds=30)))
@@ -93,6 +108,8 @@ class Runtime:
     @callback
     def sample(self):
         """Timers also sample unchanged states; unavailable is never treated as zero."""
+        if self._closed:
+            return
         if not self.config["power_entity"]:
             self.source_status = "not_configured"
             return
@@ -103,20 +120,24 @@ class Runtime:
         state = self.hass.states.get(self.config["power_entity"])
         self.source_status = "unavailable"
         if state is not None:
-            try:
-                value = finite(state.state)
-                unit = state.attributes.get("unit_of_measurement")
-                if unit in ("W", "kW") and value >= 0:
-                    watts = value * (1000 if unit == "kW" else 1)
-                    self.source_status = "ok"
-                else:
-                    self.source_status = "invalid_unit_or_value"
-            except ValueError, TypeError, OverflowError:
-                pass
+            watts = power_value(state)
+            if watts is not None:
+                self.source_status = "ok"
+            elif state.state not in ("unknown", "unavailable"):
+                self.source_status = "invalid_unit_or_value"
         if self.collector.active is None:
             self.collector.start_w = self.config["start_w"]
             self.collector.stop_w = self.config["stop_w"]
             self.collector.stop_seconds = self.config["stop_minutes"] * 60
+        if self.registration and self.registration.stage == "recording":
+            self.registration.sample(dt_util.utcnow().timestamp(), watts)
+            if self.registration.stage == "review":
+                self._cancel_registration_timer()
+                self.collector = Collector()
+                self.store.async_delay_save(self.storage_data, 0)
+            self.schedule_save()
+            async_dispatcher_send(self.hass, self.signal)
+            return
         if run := self.collector.sample(dt_util.utcnow().timestamp(), watts):
             if self.config["energy_entity"]:
                 if self._energy_start is None or self._energy_end is None:
@@ -163,6 +184,7 @@ class Runtime:
             "profiles": dict(self.profiles),
             "runs": [run.as_dict() for run in self.runs],
             "active": active.as_dict() if active else None,
+            "registration": self.registration.as_dict() if self.registration else None,
         }
 
     @callback
@@ -183,6 +205,9 @@ class Runtime:
         ):
             self._energy_start = self._energy_end = None
         if self.config["power_entity"] != previous_power:
+            if self.registration and self.registration.stage == "recording":
+                self.registration.finish(dt_util.utcnow().timestamp(), None, "measurement_changed")
+                self._cancel_registration_timer()
             # A source change must never blend measurements from two meters.
             active = self.collector.active
             if active is not None and active.duration_seconds > 0:
@@ -266,6 +291,7 @@ class Runtime:
 
     async def async_stop(self):
         self._closed = True
+        self._cancel_registration_timer()
         self._state_unsub()
         for unsub in self._unsub:
             unsub()
@@ -339,3 +365,161 @@ class Runtime:
         await self.store.async_save(self.storage_data())
         await self.async_refresh()
         return {"profile_id": profile_id, "imported_runs": len(runs)}
+
+    def _cancel_registration_timer(self):
+        if self._registration_timer:
+            self._registration_timer()
+            self._registration_timer = None
+
+    def registration_summary(self, **kwargs):
+        return (
+            self.registration.summary(self.config["start_w"], self.config["stop_w"], **kwargs)
+            if self.registration
+            else None
+        )
+
+    def _draft(self, draft_id):
+        self._require_registration_open()
+        if not self.registration or self.registration.draft_id != draft_id:
+            raise ValueError("Utkastet har ändrats eller tagits bort. Öppna registreringen igen.")
+        return self.registration
+
+    def _require_registration_open(self):
+        if self._closed:
+            raise ValueError("Diskpilot är avstängd. Ladda integrationen igen.")
+
+    async def async_start_registration(self, end_at=None):
+        async with self._registration_lock:
+            self._require_registration_open()
+            if self.registration:
+                raise ValueError("Granska eller kasta det befintliga utkastet först.")
+            entity = self.config["power_entity"]
+            watts = power_value(self.hass.states.get(entity)) if entity else None
+            if watts is None:
+                raise ValueError("Välj en tillgänglig effektsensor med enhet W eller kW.")
+            now = dt_util.utcnow().timestamp()
+            end_at = now + 8 * 3600 if end_at is None else finite(end_at)
+            if not 0 < end_at - now <= 8 * 3600:
+                raise ValueError("Välj ett avslut inom de kommande åtta timmarna.")
+            if self.collector.active:
+                raise ValueError(
+                    "En körning registreras redan automatiskt. Vänta tills den avslutats, eller märk den under Senaste körningarna."
+                )
+            self.registration = Registration(entity, now, end_at, points=[[now, watts]])
+            owner = self.registration
+            self.collector = Collector()
+
+            @callback
+            def finish_at(deadline):
+                if self._closed or self.registration is not owner or owner.stage != "recording":
+                    return
+                self._registration_timer = None
+                self.registration.sample(
+                    max(end_at, dt_util.utcnow().timestamp()),
+                    power_value(self.hass.states.get(entity)),
+                )
+                self.collector = Collector()
+                self.store.async_delay_save(self.storage_data, 0)
+                async_dispatcher_send(self.hass, self.signal)
+
+            self._registration_timer = async_track_point_in_utc_time(
+                self.hass, finish_at, dt_util.utc_from_timestamp(end_at)
+            )
+            await self.store.async_save(self.storage_data())
+            async_dispatcher_send(self.hass, self.signal)
+            return self.registration_summary(curve=True)
+
+    async def async_stop_registration(self, draft_id):
+        async with self._registration_lock:
+            draft = self._draft(draft_id)
+            if draft.stage == "recording":
+                draft.finish(
+                    dt_util.utcnow().timestamp(), power_value(self.hass.states.get(draft.entity_id))
+                )
+                self._cancel_registration_timer()
+                self.collector = Collector()
+                await self.store.async_save(self.storage_data())
+                async_dispatcher_send(self.hass, self.signal)
+            return self.registration_summary(curve=True)
+
+    async def async_discard_registration(self, draft_id):
+        async with self._registration_lock:
+            self._draft(draft_id)
+            if self.registration.stage == "recording":
+                self.collector = Collector()
+            self.registration = None
+            self._cancel_registration_timer()
+            await self.store.async_save(self.storage_data())
+            async_dispatcher_send(self.hass, self.signal)
+            return {"discarded": True}
+
+    async def async_history_registration(self, start, end):
+        async with self._registration_lock:
+            self._require_registration_open()
+            if self.registration:
+                raise ValueError("Granska eller kasta det befintliga utkastet först.")
+            entity = self.config["power_entity"]
+            if not entity:
+                raise ValueError("Välj en effektsensor i integrationens inställningar.")
+            draft = await history_registration(self.hass, entity, start, end)
+            if self._closed or self.config["power_entity"] != entity:
+                raise ValueError("Inställningarna ändrades. Hämta historiken igen.")
+            self.registration = draft
+            await self.store.async_save(self.storage_data())
+            async_dispatcher_send(self.hass, self.signal)
+            return self.registration_summary(curve=True)
+
+    async def async_save_registration(
+        self, draft_id, start, end, *, confirmed=False, profile_id=None, name=None
+    ):
+        async with self._registration_lock:
+            draft = self._draft(draft_id)
+            if draft.stage != "review" or confirmed is not True:
+                raise ValueError("Avsluta och granska hela körningen innan du sparar.")
+            run, missing = draft.measure(start, end)
+            if (
+                missing
+                or run.issues
+                or draft.reason in ("interrupted", "measurement_changed", "sample_limit")
+            ):
+                raise ValueError(
+                    "Registreringen är ofullständig. Hämta en komplett körning från historiken eller gör en ny registrering."
+                )
+            run = Run.from_dict(run.as_dict())
+            start, end = run.started_at, run.started_at + run.duration_seconds
+            if run.duration_seconds < 120 or sum(run.energy_wh) < 1:
+                raise ValueError(
+                    "Underlaget är för kort eller saknar aktiv körning (minst två minuter och 1 Wh)."
+                )
+            if self.collector.active and self.collector.active.started_at < end:
+                raise ValueError(
+                    "En automatisk körning överlappar intervallet. Vänta tills den avslutats."
+                )
+            if any(
+                old.started_at < end and old.started_at + old.duration_seconds > start
+                for old in self.runs
+            ):
+                raise ValueError(
+                    "Intervallet överlappar en sparad körning. Märk den befintliga körningen under Senaste körningarna i stället."
+                )
+            if profile_id:
+                if profile_id not in self.profiles:
+                    raise ValueError("Välj en befintlig profil.")
+            else:
+                name = self._validate_name(name or "")
+                if len(self.profiles) >= 50:
+                    raise ValueError("Det går att skapa högst 50 profiler per apparat.")
+                profile_id = uuid4().hex
+            run.program = profile_id
+            # Nothing enters the profile before all validation has succeeded.
+            if profile_id not in self.profiles:
+                self.profiles[profile_id] = name
+            self.runs.append(run)
+            self.registration = None
+            await self.store.async_save(self.storage_data())
+            await self.async_refresh()
+            return {
+                "profile_id": profile_id,
+                "run_id": run.run_id,
+                "energy_kwh": sum(run.energy_wh) / 1000,
+            }

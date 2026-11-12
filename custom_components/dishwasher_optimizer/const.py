@@ -1,7 +1,7 @@
 """Constants for Dishwasher Optimizer."""
 
 DOMAIN = "dishwasher_optimizer"
-VERSION = "0.1.0-beta.1"
+VERSION = "0.1.0-beta.2"
 PROGRAMS = {"P2": "P2 · 70 °C", "P3": "P3 · Snabb", "P4": "P4 · Eco"}
 DEFAULTS = {
     "power_entity": "",

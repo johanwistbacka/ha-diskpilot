@@ -1,5 +1,29 @@
 # Ändringslogg
 
+## 0.1.0-beta.2 – 2026-11-12
+
+Ny beta med registrering av egna programprofiler från effektmätning eller sparad historik. Kräver fortsatt Home Assistant 2026.11 eller senare. Säkerhetskopiera konfigurationen inklusive `.storage` före uppdatering.
+
+- Utökade registreringstester: oberoende energimodell, samtidiga anrop, timerägarskap, avstängning, riktiga SQLite-rader och tidszonsgränser. JavaScript-tidszonstester ingår i CI.
+- Rättad UTC-tolkning av Recorders SQLite-tider efter omstart, så att korrekt historik inte felaktigt blir en datalucka.
+- Avbrutna timers och anrop som väntar under avstängning kan inte påverka en ny registrering.
+- Reglage behåller tangentbordsfokus vid omräkning och prisuppdatering. Sena förhandsvisningssvar kan inte skriva över en ny avgränsning, och ett avslut läst före tillståndshändelsen öppnar en komplett granskning.
+- Tvetydiga klockslag avvisas även när sommartidsomställningen är en halvtimme.
+- Profil-, export-, import- och registreringsåtgärder kräver administratörsbehörighet. Interna systemanrop följer Home Assistants ordinarie modell.
+- Omräknad effekt och ackumulerad energi valideras innan lagring. Ogiltiga eller alltför stora mätningar markeras ofullständiga och kan inte skada nya lagrade kurvor eller användas för inlärning.
+
+- Registrera en ny profilkörning från nu, med manuellt avslut eller valt klockslag, samt hämta tidigare effektdata från Recorder.
+- Separat lagrat utkast med kurva, föreslagna och justerbara start-/slutgränser, omräknad energi och uttrycklig bekräftelse före sparande till ny eller befintlig profil.
+- Dataluckor och avbrutna utkast utesluts från komplett profilunderlag. Överlappande körningar avvisas och pågående manuell registrering skapar ingen automatisk kopia.
+
+### Verifiering och begränsningar
+
+- 181 Python-tester och 18 JavaScript-tester, kodkontroller, isolerade webbläsarprov samt verkliga lokala HA-prov av Recorder, sparande och omstarter. Testerna använder syntetiska sensorer och priser.
+- Befintliga profiler och körningar bevaras. Registrering skapar ett separat utkast och styr inte apparaten. Historik kräver Recorder och detaljerade tillstånd för effektsensorn.
+- Högst åtta timmar per registrering. Kända dataluckor, avbrutna utkast och överlappande sparade körningar avvisas som komplett profilunderlag. Gränser och programval måste granskas av användaren.
+- Sparade profiler och körningar har samma format som i beta.1. Registreringsutkast stöds inte i beta.1: spara eller kasta dem före återgång och behåll en säkerhetskopia.
+- Produktionsinstallation, den riktiga effektmätarens noggrannhet och användarens avtalsprissensor är ännu inte verifierade. Driftbegränsningen med täta prisuppdateringar som beskrivs under beta.1 kvarstår.
+
 ## 0.1.0-beta.1 – 2026-11-12
 
 Första numrerade betan. Kräver Home Assistant 2026.11 eller senare. Aktivera repots Pre-release-val i Marketplace/HACS för att välja betan. Säkerhetskopiera konfigurationen inklusive `.storage` före installation eller uppdatering.

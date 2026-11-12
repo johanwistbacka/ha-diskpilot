@@ -124,3 +124,107 @@ import_profile_file:
     name:
       selector:
         text:
+
+get_registration:
+  name: Get registration
+  description: Read the current draft or recalculate a selected interval without saving.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    draft_id:
+      selector:
+        text:
+    started_at:
+      selector:
+        text:
+    ended_at:
+      selector:
+        text:
+
+start_registration:
+  name: Start registration
+  description: Start a private draft from the configured power sensor. Stops after eight hours at the latest.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    end_at:
+      selector:
+        text:
+
+stop_registration:
+  name: Stop registration
+  description: Finish recording and open review. Does not add a run to a profile.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    draft_id:
+      required: true
+      selector:
+        text:
+
+discard_registration:
+  name: Discard registration
+  description: Delete only the specified draft. Existing runs and profiles are retained.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    draft_id:
+      required: true
+      selector:
+        text:
+
+history_registration:
+  name: Register from history
+  description: Read a past interval of up to eight hours from Recorder into a reviewable draft.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    started_at:
+      required: true
+      selector:
+        text:
+    ended_at:
+      required: true
+      selector:
+        text:
+
+save_registration:
+  name: Save reviewed registration
+  description: Add the selected complete interval to a new or existing profile after explicit confirmation.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    draft_id:
+      required: true
+      selector:
+        text:
+    started_at:
+      required: true
+      selector:
+        text:
+    ended_at:
+      required: true
+      selector:
+        text:
+    confirmed:
+      required: true
+      selector:
+        boolean:
+    profile_id:
+      selector:
+        text:
+    name:
+      selector:
+        text:

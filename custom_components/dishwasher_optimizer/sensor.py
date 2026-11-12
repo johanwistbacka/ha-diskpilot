@@ -75,6 +75,8 @@ class StatusSensor(BaseSensor):
             "recent_runs": self.runtime.summaries(),
             "profiles": [{"id": key, "name": name} for key, name in self.runtime.profiles.items()],
             "version": VERSION,
+            "power_entity": self.runtime.config["power_entity"],
+            "registration": self.runtime.registration_summary(),
         }
 
 

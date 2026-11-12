@@ -17,7 +17,7 @@ CARD_PATH = f"/{DOMAIN}/diskpilot-card.js"
 def _card_revision():
     """Change both module URLs when either bundled JavaScript file changes."""
     digest = sha256()
-    for name in ("diskpilot-card.js", "profile-manager.js"):
+    for name in ("diskpilot-card.js", "profile-manager.js", "profile-registration.js"):
         digest.update((Path(__file__).parent / "www" / name).read_bytes())
     return digest.hexdigest()[:16]
 
@@ -42,6 +42,7 @@ async def async_setup_card(hass):
                 )
                 for name in (
                     "profile-manager.js",
+                    "profile-registration.js",
                     "profile-import.html",
                     "profile-prompt.txt",
                     "example-profile.json",

@@ -10,6 +10,7 @@ from typing import Any
 from uuid import uuid4
 
 MAX_SECONDS = 8 * 3600
+MAX_ENERGY_WH = 50_000
 
 
 def finite(value: Any) -> float:
@@ -47,15 +48,33 @@ class Run:
     meter_note: str = ""
 
     def add(self, start: float, end: float, watts: float) -> None:
-        """Integrate a held state, splitting at relative minute boundaries."""
+        """Integrate atomically; never mutate a curve beyond the reload contract."""
+        start, end, watts = finite(start), finite(end), finite(watts)
+        if (
+            watts < 0
+            or start < self.started_at
+            or end < start
+            or end - self.started_at > MAX_SECONDS
+        ):
+            raise ValueError("Invalid integration interval")
+        updates = []
         while start < end:
             offset = max(0, start - self.started_at)
             index = int(offset // 60)
             edge = min(end, self.started_at + (index + 1) * 60)
-            while len(self.energy_wh) <= index:
-                self.energy_wh.append(0.0)
-            self.energy_wh[index] += watts * (edge - start) / 3600
+            if edge <= start:
+                raise ValueError("Invalid integration precision")
+            updates.append((index, finite((watts / 3600) * (edge - start))))
             start = edge
+        curve = list(self.energy_wh)
+        for index, value in updates:
+            while len(curve) <= index:
+                curve.append(0.0)
+            curve[index] = finite(curve[index] + value)
+        total = sum(curve)
+        if not math.isfinite(total) or total > MAX_ENERGY_WH:
+            raise ValueError("Invalid energy curve")
+        self.energy_wh = curve
         self.duration_seconds = end - self.started_at
 
     def as_dict(self) -> dict:
@@ -84,7 +103,7 @@ class Run:
         if len(run.energy_wh) != math.ceil(run.duration_seconds / 60):
             raise ValueError("One energy value is required for each minute")
         run.energy_wh = [finite(value) for value in run.energy_wh]
-        if min(run.energy_wh) < 0 or sum(run.energy_wh) > 50_000:
+        if min(run.energy_wh) < 0 or sum(run.energy_wh) > MAX_ENERGY_WH:
             raise ValueError("Invalid energy curve")
         if run.program is not None and (
             not isinstance(run.program, str)
@@ -125,15 +144,22 @@ class Collector:
         if self.last_t is not None and now <= self.last_t:
             return None
         if watts is not None:
-            watts = finite(watts)
-            if watts < 0:
+            try:
+                watts = finite(watts)
+            except ValueError, TypeError, OverflowError:
+                watts = None
+            if watts is not None and watts < 0:
                 watts = None
         completed = None
         if self.active is not None and self.last_t is not None:
             gap = now - self.last_t
             end = min(now, self.active.started_at + MAX_SECONDS)
             if self.last_w is not None and gap <= 180:
-                self.active.add(self.last_t, end, self.last_w)
+                try:
+                    self.active.add(self.last_t, end, self.last_w)
+                except ValueError, TypeError, OverflowError:
+                    self._issue("invalid_energy")
+                    self._pad(end)
             else:
                 self._issue("missing_data")
                 self._pad(end)

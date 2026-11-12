@@ -2,6 +2,9 @@
 const managerUrl = new URL("./profile-manager.js", import.meta.url);
 managerUrl.search = new URL(import.meta.url).search;
 const { renderProfileControls } = await import(managerUrl.href);
+const registrationUrl = new URL("./profile-registration.js", import.meta.url);
+registrationUrl.search = new URL(import.meta.url).search;
+const { renderRegistration } = await import(registrationUrl.href);
 const STATUS = {
   needs_labelled_run: "Behöver en märkt körning",
   needs_saved_profile: "Behöver en sparad programprofil",
@@ -42,7 +45,9 @@ class DiskpilotCard extends HTMLElement {
       if (this._drafts?.[run.run_id] === (run.program || "unassigned")) delete this._drafts[run.run_id];
     }
     const state = Object.values(hass.states).filter(s => s.attributes.diskpilot_entry_id === entry);
-    const signature = JSON.stringify(state.map(s => [s.state, s.attributes]));
+    const signature = JSON.stringify(state.map(s => { const {registration, ...attributes}=s.attributes;return [s.state,attributes,registration?.stage]; }));
+    const current=entries.find(s=>s.attributes.diskpilot_entry_id===entry);
+    if(current)this._registrationUpdate?.(current.attributes);
     if (signature !== this._signature) { this._signature = signature; this.render(); }
   }
   getCardSize() { return 8; }
@@ -57,7 +62,8 @@ class DiskpilotCard extends HTMLElement {
     const root = this.shadowRoot;
     const card = root.querySelector("ha-card") || el("ha-card");
     const active = root.activeElement;
-    const editing = active?.matches('input[type="text"]') ? {
+    const editing = active?.matches('input, select, button, summary') ? {
+      node: active,
       label: active.getAttribute("aria-label"),
       start: active.selectionStart,
       end: active.selectionEnd,
@@ -79,8 +85,10 @@ class DiskpilotCard extends HTMLElement {
       dt { color: var(--secondary-text-color); font-size: 12px; } dd { margin: 2px 0 0; font-size: 14px; }
       .run { padding: 10px 0; border-bottom: 1px solid var(--divider-color); }
       .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
-      select, button, input[type=text] { font: inherit; font-size: 14px; min-height: 44px; padding: 8px 10px; border-radius: 8px; box-sizing:border-box;max-width:100%; }
-      input[type=text] { background:var(--card-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color); }
+      select, button, input[type=text], input[type=datetime-local] { font: inherit; font-size: 14px; min-height: 44px; padding: 8px 10px; border-radius: 8px; box-sizing:border-box;max-width:100%; }
+      input[type=text], input[type=datetime-local] { background:var(--card-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color); }
+      .registration-body { display:grid;gap:12px;min-width:0; } .registration-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;} .registration-field {display:grid;gap:6px;min-width:0;font-size:13px;} .registration-field input,.registration-field select {width:100%;min-width:0;} .registration-chart svg {height:auto;display:block;} .registration-chart {color:var(--primary-color);min-width:0;} .registration-body h3,.registration-body p {margin:0;} .registration-body .review {margin:0;} .secondary {background:transparent;color:var(--primary-color);border:1px solid var(--divider-color);} input[type=range] {min-height:44px;accent-color:var(--primary-color);} .registration-save {justify-self:start;}
+      @media(max-width:480px){.registration-grid{grid-template-columns:1fr;}input[type=datetime-local],input[type=text]{font-size:16px;}}
       details { margin:18px 0; } summary { cursor:pointer;min-height:44px;line-height:44px; } a {color:var(--primary-color);}
       .review { display:flex;align-items:center;gap:10px;min-height:44px;margin:12px 0; } .review input {width:22px;height:22px;flex-shrink:0;}
       .preview { padding:12px;border:1px solid var(--divider-color);border-radius:8px;margin:12px 0; } svg {width:100%;height:70px;color:var(--primary-color);}
@@ -100,7 +108,7 @@ class DiskpilotCard extends HTMLElement {
     const entryId = status.attributes.diskpilot_entry_id;
     const profiles = status.attributes.profiles || [];
     const states = Object.values(this._hass.states).filter(s => s.attributes.diskpilot_entry_id === entryId && s.attributes.program);
-    const running = status.state === "planner" ? "Planering med sparade profiler · effektmätning avstängd" : status.state === "running" ? "Körning pågår" : status.state === "source_unavailable" ? "Effektsensorn är inte tillgänglig" : "Redo att registrera nästa körning";
+    const running = status.attributes.registration?.stage === "recording" ? "Registrering pågår" : status.attributes.registration?.stage === "review" ? "Utkast väntar på granskning" : status.state === "planner" ? "Planering med sparade profiler · effektmätning avstängd" : status.state === "running" ? "Körning pågår" : status.state === "source_unavailable" ? "Effektsensorn är inte tillgänglig" : "Redo att registrera nästa körning";
     card.append(el("p", running, "muted"));
     for (const profile of profiles) {
       const program=profile.id;
@@ -127,12 +135,13 @@ class DiskpilotCard extends HTMLElement {
     card.append(el("p", "Sluttiden avser återgång till viloläge. När disken är klar behöver verifieras separat.", "note"));
     if(!profiles.length)card.append(el("p","Lägg till egna profiler och importera deras körningar för att börja planera."));
     renderProfileControls.call(this,card,entryId,profiles,el,number);
+    renderRegistration.call(this,card,entryId,profiles,status.attributes,el,number);
     // HA can refresh these sensors while the user is typing a profile name.
-    if (editing?.label) {
-      const replacement = [...root.querySelectorAll('input[type="text"]')].find(input => input.getAttribute("aria-label") === editing.label);
+    if (editing) {
+      const replacement = editing.node.isConnected ? editing.node : editing.label ? [...root.querySelectorAll('input, select, button, summary')].find(input => input.getAttribute("aria-label") === editing.label) : null;
       if (replacement) {
         replacement.focus({preventScroll:true});
-        replacement.setSelectionRange(editing.start, editing.end, editing.direction);
+        if (typeof editing.start === "number" && typeof replacement.setSelectionRange === "function") replacement.setSelectionRange(editing.start, editing.end, editing.direction);
       }
     }
     if (status.state === "planner") return;

@@ -4,10 +4,12 @@ import probatio as vol
 from homeassistant.core import SupportsResponse
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.service import async_register_admin_service
 
 from .const import DOMAIN
 from .engine import Run, timestamp
 from .frontend import async_setup_card
+from .registration_services import register_registration_services
 from .runtime import Runtime
 
 PLATFORMS = ["sensor"]
@@ -46,6 +48,8 @@ def _register_services(hass):
         if runtime._closed:
             raise ServiceValidationError("Diskpilot is not loaded")
         return runtime
+
+    register_registration_services(hass, runtime_for)
 
     async def get_runs(call):
         runtime = runtime_for(call)
@@ -114,7 +118,8 @@ def _register_services(hass):
             raise ServiceValidationError(str(err)) from err
 
     base = {vol.Required("entry_id"): str}
-    hass.services.async_register(
+    async_register_admin_service(
+        hass,
         DOMAIN,
         "get_runs",
         get_runs,
@@ -129,7 +134,8 @@ def _register_services(hass):
         ),
         supports_response=SupportsResponse.ONLY,
     )
-    hass.services.async_register(
+    async_register_admin_service(
+        hass,
         DOMAIN,
         "label_run",
         label_run,
@@ -142,7 +148,8 @@ def _register_services(hass):
             }
         ),
     )
-    hass.services.async_register(
+    async_register_admin_service(
+        hass,
         DOMAIN,
         "import_run",
         import_run,
@@ -160,7 +167,8 @@ def _register_services(hass):
         ),
         supports_response=SupportsResponse.ONLY,
     )
-    hass.services.async_register(
+    async_register_admin_service(
+        hass,
         DOMAIN,
         "save_profile",
         save_profile,
@@ -178,14 +186,16 @@ def _register_services(hass):
         vol.Required("filename"): vol.All(str, vol.Length(max=255)),
         vol.Required("content"): vol.All(str, vol.Length(max=524288)),
     }
-    hass.services.async_register(
+    async_register_admin_service(
+        hass,
         DOMAIN,
         "preview_profile_file",
         preview_file,
         schema=vol.Schema(file_fields),
         supports_response=SupportsResponse.ONLY,
     )
-    hass.services.async_register(
+    async_register_admin_service(
+        hass,
         DOMAIN,
         "import_profile_file",
         import_file,
