@@ -243,3 +243,52 @@ async def test_importing_older_history_does_not_hide_newest_runs(hass):
     newest = Run(3000, 60, [1])
     runtime.runs = [newest, Run(2000, 60, [1]), Run(1000, 60, [1])]
     assert runtime.summaries()[0]["run_id"] == newest.run_id
+
+
+async def test_planner_starts_without_meter_and_keeps_imported_profiles(hass):
+    e = entry()
+    e.data = {**DEFAULTS, "name": "Planerare"}
+    assert not validate_settings(hass, e.data)
+    runtime = Runtime(hass, e)
+    await runtime.store.async_save({"runs": [Run(1000, 120, [1, 2], program="P4").as_dict()]})
+    await runtime.async_start()
+    assert StatusSensor(runtime).native_value == "planner"
+    assert StatusSensor(runtime).extra_state_attributes["measurement_enabled"] is False
+    assert runtime.results["P4"]["sample_count"] == 1
+    assert runtime.results["P2"]["status"] == "needs_saved_profile"
+    assert runtime.collector.active is None
+    await runtime.async_stop()
+
+
+async def test_meter_can_be_added_and_removed_without_losing_profiles(hass):
+    e = entry()
+    e.data = {**DEFAULTS, "name": "Planerare"}
+    hass.states.async_set("sensor.dishwasher_power", "0.3", {"unit_of_measurement": "W"})
+    runtime = Runtime(hass, e)
+    await runtime.async_start()
+    reference = Run(1000, 120, [1, 2], program="P4")
+    runtime.runs.append(reference)
+    e.options = {"power_entity": "sensor.dishwasher_power"}
+    await runtime.async_apply_options(hass, e)
+    runtime.sample()
+    assert runtime.collector.armed
+    runtime.collector.active = Run(2000, 120, [3, 4])
+    e.options = {"power_entity": ""}
+    await runtime.async_apply_options(hass, e)
+    assert StatusSensor(runtime).native_value == "planner"
+    assert runtime.collector.active is None
+    assert runtime.runs[-1].issues == ["measurement_changed"]
+    assert runtime.results["P4"]["sample_count"] == 1
+    assert runtime.runs[0].energy_wh == reference.energy_wh
+    await runtime.async_stop()
+
+
+async def test_two_entries_cannot_capture_from_same_meter(hass):
+    original = entry()
+    config = {**DEFAULTS, "power_entity": "sensor.dishwasher_power"}
+    hass.states.async_set("sensor.dishwasher_power", "0.3", {"unit_of_measurement": "W"})
+    with patch.object(hass.config_entries, "async_entries", return_value=[original]):
+        assert validate_settings(hass, config) == {"base": "power_in_use"}
+        assert not validate_settings(hass, config, original.entry_id)
+        original.options = {"power_entity": ""}
+        assert not validate_settings(hass, config)

@@ -1,0 +1,2 @@
+homeassistant==2026.11.1
+home-assistant-frontend==20261028.5

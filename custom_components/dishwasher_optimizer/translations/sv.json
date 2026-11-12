@@ -4,10 +4,10 @@
     "step": {
       "user": {
         "title": "Diskpilot",
-        "description": "Välj diskmaskinens effektsensor. Prissensor och prisformat kan ändras senare under Konfigurera.",
+        "description": "Planera med sparade programprofiler och valfri prissensor. Effektsensor behövs bara om du vill samla nya körningar och kan läggas till senare.",
         "data": {
           "name": "Diskmaskinens namn",
-          "power_entity": "Effektsensor",
+          "power_entity": "Effektsensor (valfri)",
           "price_entity": "Prissensor (valfri)"
         }
       }
@@ -15,7 +15,8 @@
     "error": {
       "invalid_power": "Välj en effektsensor med enheten W eller kW.",
       "invalid_price": "Prissensorn finns inte.",
-      "invalid_settings": "Kontrollera fälten. Startgränsen måste vara högre än vilogränsen och omräkningsfaktorn måste vara positiv."
+      "invalid_settings": "Kontrollera fälten. Startgränsen måste vara högre än vilogränsen och omräkningsfaktorn måste vara positiv.",
+      "power_in_use": "Effektsensorn används redan av en annan Diskpilot-instans."
     },
     "abort": {
       "already_configured": "Effektsensorn används redan av Diskpilot."
@@ -37,14 +38,16 @@
           "horizon_hours": "Åter i vila inom antal timmar",
           "start_w": "Aktivitet börjar över (W)",
           "stop_w": "Viloläge under (W)",
-          "stop_minutes": "Bekräfta viloläge i (minuter)"
+          "stop_minutes": "Bekräfta viloläge i (minuter)",
+          "power_entity": "Effektsensor (valfri)"
         }
       }
     },
     "error": {
       "invalid_power": "Välj en effektsensor med enheten W eller kW.",
       "invalid_price": "Prissensorn finns inte.",
-      "invalid_settings": "Kontrollera fälten. Startgränsen måste vara högre än vilogränsen och omräkningsfaktorn måste vara positiv."
+      "invalid_settings": "Kontrollera fälten. Startgränsen måste vara högre än vilogränsen och omräkningsfaktorn måste vara positiv.",
+      "power_in_use": "Effektsensorn används redan av en annan Diskpilot-instans."
     }
   }
 }

@@ -4,6 +4,7 @@ DOMAIN = "dishwasher_optimizer"
 VERSION = "0.0.0"
 PROGRAMS = {"P2": "P2 · 70 °C", "P3": "P3 · Snabb", "P4": "P4 · Eco"}
 DEFAULTS = {
+    "power_entity": "",
     "price_entity": "",
     "price_attributes": "prices",
     "start_key": "start",

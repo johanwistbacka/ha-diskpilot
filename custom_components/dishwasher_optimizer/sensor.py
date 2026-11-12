@@ -43,6 +43,8 @@ class StatusSensor(BaseSensor):
 
     @property
     def native_value(self):
+        if not self.runtime.config["power_entity"]:
+            return "planner"
         if self.runtime.source_status != "ok":
             return "source_unavailable"
         return "running" if self.runtime.collector.active else "idle"
@@ -53,6 +55,7 @@ class StatusSensor(BaseSensor):
             "diskpilot_entry_id": self.runtime.entry.entry_id,
             "price_status": self.runtime.price_status,
             "source_status": self.runtime.source_status,
+            "measurement_enabled": bool(self.runtime.config["power_entity"]),
             "run_count": len(self.runtime.runs),
             "unlabelled_runs": sum(r.program is None for r in self.runtime.runs),
             "recent_runs": self.runtime.summaries(),

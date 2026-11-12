@@ -1,6 +1,6 @@
 # Diskpilot
 
-Diskpilot lär sig diskmaskinens effektkurvor och beräknar billigaste start och elkostnad för P2, P3 och P4. Du ser alla program samtidigt och kan märka körningar i efterhand.
+Diskpilot använder sparade programprofiler för att beräkna billigaste start och elkostnad för P2, P3 och P4. Du ser alla program samtidigt. En effektsensor är valfri och behövs bara om du vill samla in nya körningar.
 
 **Utvecklingsversion.** Kräver Home Assistant 2026.11 eller senare. Ingen automatisk start av maskinen. Programnamnen är tills vidare P2 (70 °C), P3 (snabb) och P4 (Eco). Ingen personlig mätdata eller förinställd förbrukning följer med koden.
 
@@ -11,7 +11,7 @@ I Home Assistant 2026.11 finns Marketplace inbyggd som efterföljare till HACS. 
 1. Lägg till `https://github.com/johanwistbacka/ha-diskpilot` som eget repo i Marketplace, typ **Integration**.
 2. Installera och starta om Home Assistant.
 3. Lägg till **Diskpilot** under Inställningar → Enheter och tjänster.
-4. Välj effektsensor (W eller kW). Prissensor är valfri, så insamlingen kan starta direkt.
+4. Välj prissensor om du vill beräkna start och kostnad. Effektsensor är valfri och kan lämnas tom för planering med sparade profiler. Lägg till den senare under Konfigurera om du vill samla nya körningar.
 5. Lägg till kortet **Diskpilot** i dashboardens kortväljare. Kortets resurs registreras automatiskt när dashboardresurser hanteras via gränssnittet.
 
 Manuell installation: kopiera `custom_components/dishwasher_optimizer` till din Home Assistant-konfiguration under `custom_components/` och starta om.
@@ -19,6 +19,8 @@ Manuell installation: kopiera `custom_components/dishwasher_optimizer` till din 
 Ännu finns ingen numrerad release. Använd huvudgrenen för utveckling. Kommande versioner distribueras som GitHub-releaser och kan uppdateras via Marketplace. Lokal historik ligger i Home Assistants `.storage`, utanför integrationskoden, och ersätts inte när koden uppdateras. Ta med `.storage` i dina säkerhetskopior.
 
 ## Prissensor
+
+Under **Konfigurera** kan du lägga till, byta eller ta bort effektsensor utan att förlora sparade profiler. Saknar du en programprofil visas detta tydligt; koden gissar inte förbrukningen. Sparade uppmätta kurvor kan importeras med åtgärden nedan. Ingen fysisk mätare krävs för att använda dem.
 
 Under **Konfigurera** kan du byta prissensor och ange vilka attribut och fältnamn den använder. Ett aktuellt pris som ensamt sensorvärde räcker inte för optimering. Sensorn behöver innehålla framtida prisintervall, exempelvis:
 
@@ -41,13 +43,13 @@ Din specifika avtalsprissensor behöver fortfarande kontrolleras mot detta forma
 
 ## Insamling, programbilder och rättelser
 
-Effekt över startgränsen (standard 5 W) startar en körning. Under vilogränsen (standard 1 W) i tio minuter bekräftar slutet. Bekräftelsetiden räknas inte in i energi eller programprofil. En lång avslutning kring 3 W behålls i mätningen.
+När en effektsensor är ansluten börjar insamlingen automatiskt. Effekt över startgränsen (standard 5 W) startar en körning. Under vilogränsen (standard 1 W) i tio minuter bekräftar slutet. Bekräftelsetiden räknas inte in i energi eller programprofil. En lång avslutning kring 3 W behålls i mätningen.
 
 Märk programmet under **Senaste körningarna** i kortet. Märkningen går att ändra eller ta bort. Varje programprofil räknas om från sina märkta, fullständiga körningar. Omärkta körningar används inte för att gissa programnamn.
 
 Du kan fotografera programvalet vid start och senare lämna bilden tillsammans med datum/starttid och exporterad körning för analys. Bilden behöver visa programnumret och eventuella tillval. **Integrationen tolkar eller laddar inte upp bilder.** Bildens filtid ensam är ingen säker märkning, särskilt om maskinen har fördröjd start.
 
-Körningar lagras lokalt med id, starttid, tid till vila, energi per minut, programetikett, anteckning och kvalitetsmarkeringar. Första körningen efter installation kan vara påbörjad redan när insamlingen startar. Den märks då ofullständig. Avbrott, omstarter och kända dataluckor utesluts från inlärning. Oförändrade sensortillstånd samplas var 30:e sekund. Om en sensor fastnar utan att rapportera `unavailable` kan Diskpilot inte själv upptäcka det.
+Körningar lagras lokalt med id, starttid, tid till vila, energi per minut, programetikett, anteckning och kvalitetsmarkeringar. Första körningen efter installation kan vara påbörjad redan när insamlingen startar. Den märks då ofullständig. Avbrott, omstarter, byte av effektmätare och kända dataluckor utesluts från inlärning. När effektmätningen är avstängd fortsätter planeringen med de sparade profilerna. Oförändrade sensortillstånd samplas var 30:e sekund. Om en sensor fastnar utan att rapportera `unavailable` kan Diskpilot inte själv upptäcka det.
 
 Som första underlag räcker en märkt körning per program. Kortet visar när uppskattningen bara bygger på en körning. Fler körningar förbättrar medelprofilen. Energiförbrukningens observerade min/max och antal mätningar finns som sensorattribut. Detta är ingen statistisk garanti.
 
@@ -85,6 +87,10 @@ Energin integreras med föregående effektvärde fram till nästa mätning och d
 Optimeringen provar start nu och minutgränser fram till vald sluttidsgräns, 1–48 timmar framåt. Varje minut delas vid prisgränser. Elpriset extrapoleras inte. Framtida priser som ännu inte publicerats kan senare ge en annan rekommendation. Tysta källfel och mätarens noggrannhet ligger utanför vad koden kan verifiera. Programtillval bör jämföras innan olika körningar slås ihop under samma etikett.
 
 Första versionen har ingen fjärrstart, automatisk bildtolkning, automatisk programklassificering, nattliga tidsfönster eller separat färdigtid. Den skickar ingen mätdata till externa tjänster. GitHub/Marketplace hanterar hämtning av kod, inte analys av körningar.
+
+## Lokal provmiljö
+
+En separat Home Assistant med testsensorer kan startas med `sh dev/run-local.sh`. Se [anvisningar för lokal testmiljö](dev/README.md). Ingen av hemmets sensorer behövs för att prova integrationen och kortet. Testdata sparas privat och följer inte med i GitHub-repot.
 
 ## Utveckling
 

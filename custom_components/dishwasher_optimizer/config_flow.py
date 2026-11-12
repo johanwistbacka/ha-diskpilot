@@ -15,9 +15,13 @@ def settings_schema(values, *, setup=False):
     fields = {}
     if setup:
         fields[vol.Required("name", default=values.get("name", "Diskmaskin"))] = str
-        fields[vol.Required("power_entity")] = selector.EntitySelector(
-            selector.EntitySelectorConfig(domain="sensor", device_class="power")
+    fields[
+        vol.Optional(
+            "power_entity", description={"suggested_value": values.get("power_entity") or None}
         )
+    ] = selector.EntitySelector(
+        selector.EntitySelectorConfig(domain="sensor", device_class="power")
+    )
     fields[
         vol.Optional(
             "price_entity", description={"suggested_value": values.get("price_entity") or None}
@@ -37,11 +41,16 @@ def settings_schema(values, *, setup=False):
     return vol.Schema(fields)
 
 
-def validate_settings(hass, data):
+def validate_settings(hass, data, entry_id=None):
     """Check units and parameters, but allow temporarily unavailable sensors."""
-    power = hass.states.get(data["power_entity"])
-    if power is None or power.attributes.get("unit_of_measurement") not in ("W", "kW"):
-        return {"base": "invalid_power"}
+    if data.get("power_entity"):
+        power = hass.states.get(data["power_entity"])
+        if power is None or power.attributes.get("unit_of_measurement") not in ("W", "kW"):
+            return {"base": "invalid_power"}
+        for existing in hass.config_entries.async_entries(DOMAIN):
+            existing_power = existing.options.get("power_entity", existing.data.get("power_entity"))
+            if existing.entry_id != entry_id and existing_power == data["power_entity"]:
+                return {"base": "power_in_use"}
     if data.get("price_entity") and hass.states.get(data["price_entity"]) is None:
         return {"price_entity": "invalid_price"}
     if (
@@ -60,7 +69,7 @@ def validate_settings(hass, data):
 
 
 class DiskpilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Create one collector for each selected power sensor."""
+    """Create an appliance planner with optional power collection."""
 
     VERSION = 1
 
@@ -70,8 +79,6 @@ class DiskpilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data = {**DEFAULTS, **user_input}
             errors = validate_settings(self.hass, data)
             if not errors:
-                await self.async_set_unique_id(data["power_entity"])
-                self._abort_if_unique_id_configured()
                 return self.async_create_entry(title=data["name"], data=data)
         return self.async_show_form(
             step_id="user", data_schema=settings_schema(user_input or {}, setup=True), errors=errors
@@ -91,9 +98,15 @@ class DiskpilotOptionsFlow(config_entries.OptionsFlow):
         values = {**DEFAULTS, **self.config_entry.data, **self.config_entry.options}
         errors = {}
         if user_input is not None:
-            # Omitting the optional entity explicitly disables optimisation.
-            user_input = {**user_input, "price_entity": user_input.get("price_entity", "")}
-            errors = validate_settings(self.hass, {**values, **user_input})
+            # Clearing an optional selector explicitly disables that input.
+            user_input = {
+                **user_input,
+                "power_entity": user_input.get("power_entity", ""),
+                "price_entity": user_input.get("price_entity", ""),
+            }
+            errors = validate_settings(
+                self.hass, {**values, **user_input}, self.config_entry.entry_id
+            )
             if not errors:
                 user_input["currency"] = user_input["currency"].upper()
                 return self.async_create_entry(title="", data=user_input)

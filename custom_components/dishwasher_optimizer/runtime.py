@@ -53,10 +53,14 @@ class Runtime:
     def _bind_states(self):
         if getattr(self, "_state_unsub", None):
             self._state_unsub()
-        entities = [self.config["power_entity"]]
+        entities = [self.config["power_entity"]] if self.config["power_entity"] else []
         if self.config["price_entity"]:
             entities.append(self.config["price_entity"])
-        self._state_unsub = async_track_state_change_event(self.hass, entities, self._state_changed)
+        self._state_unsub = (
+            async_track_state_change_event(self.hass, entities, self._state_changed)
+            if entities
+            else lambda: None
+        )
 
     @callback
     def _state_changed(self, event):
@@ -73,6 +77,9 @@ class Runtime:
     @callback
     def sample(self):
         """Timers also sample unchanged states; unavailable is never treated as zero."""
+        if not self.config["power_entity"]:
+            self.source_status = "not_configured"
+            return
         was_active = self.collector.active is not None
         watts = None
         state = self.hass.states.get(self.config["power_entity"])
@@ -114,7 +121,17 @@ class Runtime:
             self.store.async_delay_save(self.storage_data, 0)
 
     async def async_apply_options(self, hass, entry):
+        previous_power = self.config["power_entity"]
         self.config = {**DEFAULTS, **entry.data, **entry.options}
+        if self.config["power_entity"] != previous_power:
+            # A source change must never blend measurements from two meters.
+            active = self.collector.active
+            if active is not None and active.duration_seconds > 0:
+                active.issues.append("measurement_changed")
+                self.runs.append(active)
+            self.collector = Collector()
+            self.source_status = "unknown" if self.config["power_entity"] else "not_configured"
+            await self.store.async_save(self.storage_data())
         self._bind_states()
         await self.async_refresh()
 
@@ -156,7 +173,11 @@ class Runtime:
                     "energy_min_kwh": profile.min_kwh if profile else None,
                     "energy_max_kwh": profile.max_kwh if profile else None,
                     "status": (
-                        "needs_labelled_run"
+                        (
+                            "needs_labelled_run"
+                            if self.config["power_entity"]
+                            else "needs_saved_profile"
+                        )
                         if profile is None
                         else self.price_status
                         if self.price_status != "ok"

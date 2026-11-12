@@ -4,10 +4,10 @@
     "step": {
       "user": {
         "title": "Diskpilot",
-        "description": "Select your dishwasher power sensor. Price source and format can be changed later in Configure.",
+        "description": "Plan with saved program profiles. A power sensor is optional and only needed to collect new runs; add one later if desired.",
         "data": {
           "name": "Appliance name",
-          "power_entity": "Power sensor",
+          "power_entity": "Power sensor (optional)",
           "price_entity": "Price sensor (optional)"
         }
       }
@@ -15,7 +15,8 @@
     "error": {
       "invalid_power": "Select a power sensor measured in W or kW.",
       "invalid_price": "The price sensor does not exist.",
-      "invalid_settings": "Check the fields, threshold order, currency code and positive price multiplier."
+      "invalid_settings": "Check the fields, threshold order, currency code and positive price multiplier.",
+      "power_in_use": "Another Diskpilot entry is already collecting from this power sensor."
     },
     "abort": {
       "already_configured": "This power sensor is already configured."
@@ -37,14 +38,16 @@
           "horizon_hours": "Finish within this many hours",
           "start_w": "Activity starts above (W)",
           "stop_w": "Standby below (W)",
-          "stop_minutes": "Confirm standby for (minutes)"
+          "stop_minutes": "Confirm standby for (minutes)",
+          "power_entity": "Power sensor (optional)"
         }
       }
     },
     "error": {
       "invalid_power": "Select a power sensor measured in W or kW.",
       "invalid_price": "The price sensor does not exist.",
-      "invalid_settings": "Check the fields, threshold order, currency code and positive price multiplier."
+      "invalid_settings": "Check the fields, threshold order, currency code and positive price multiplier.",
+      "power_in_use": "Another Diskpilot entry is already collecting from this power sensor."
     }
   }
 }

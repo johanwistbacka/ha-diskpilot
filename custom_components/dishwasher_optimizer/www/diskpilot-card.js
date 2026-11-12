@@ -2,6 +2,7 @@
 const PROGRAMS = { P2: "P2 · 70 °C", P3: "P3 · Snabb", P4: "P4 · Eco" };
 const STATUS = {
   needs_labelled_run: "Behöver en märkt körning",
+  needs_saved_profile: "Behöver en sparad programprofil",
   not_configured: "Välj prissensor i integrationens inställningar",
   unavailable: "Prissensorn är inte tillgänglig",
   no_intervals: "Prissensorn saknar prisintervall",
@@ -76,10 +77,10 @@ class DiskpilotCard extends HTMLElement {
     card.append(el("h2", this._config.title || "Diskpilot"));
     const list = statuses(this._hass);
     const status = this._config.entry_id ? list.find(s => s.attributes.diskpilot_entry_id === this._config.entry_id) : list[0];
-    if (!status) { card.append(el("p", "Lägg till Diskpilot-integrationen och välj en effektsensor.")); return; }
+    if (!status) { card.append(el("p", "Lägg till Diskpilot-integrationen för din diskmaskin.")); return; }
     const entryId = status.attributes.diskpilot_entry_id;
     const states = Object.values(this._hass.states).filter(s => s.attributes.diskpilot_entry_id === entryId && s.attributes.program);
-    const running = status.state === "running" ? "Körning pågår" : status.state === "source_unavailable" ? "Effektsensorn är inte tillgänglig" : "Redo att registrera nästa körning";
+    const running = status.state === "planner" ? "Planering med sparade profiler · effektmätning avstängd" : status.state === "running" ? "Körning pågår" : status.state === "source_unavailable" ? "Effektsensorn är inte tillgänglig" : "Redo att registrera nästa körning";
     card.append(el("p", running, "muted"));
     for (const program of Object.keys(PROGRAMS)) {
       const sensor = states.find(s => s.attributes.program === program);
@@ -103,12 +104,13 @@ class DiskpilotCard extends HTMLElement {
       card.append(section);
     }
     card.append(el("p", "Sluttiden avser återgång till viloläge. När disken är klar behöver verifieras separat.", "note"));
+    if (status.state === "planner") return;
     card.append(el("h3", "Senaste körningarna"));
     const message = el("div", this._message || "", "message");
     message.setAttribute("role", "status"); message.setAttribute("aria-live", "polite");
     card.append(message);
     const runs = status.attributes.recent_runs || [];
-    if (!runs.length) card.append(el("p", "Här visas körningarna när de har avslutats och viloläget har bekräftats.", "muted"));
+    if (!runs.length) card.append(el("p", status.state === "planner" ? "Importera sparade profiler eller anslut en effektmätare när du vill samla nya körningar." : "Här visas körningarna när de har avslutats och viloläget har bekräftats.", "muted"));
     for (const run of runs.slice(0, 5)) {
       const row = el("div", undefined, "run");
       row.append(el("div", `${time(run.started_at, this._hass)} · ${number(run.energy_kwh, 3)} kWh · ${number(run.duration_minutes, 0)} min`));
