@@ -1,0 +1,73 @@
+get_runs:
+  name: Export runs
+  description: Return stored runs with minute energy in Wh for analysis and backup.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    offset:
+      selector:
+        number:
+          min: 0
+          max: 100000
+          mode: box
+    limit:
+      selector:
+        number:
+          min: 1
+          max: 100
+          mode: box
+label_run:
+  name: Label run
+  description: Assign or correct a program label and rebuild the learned profiles.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    run_id:
+      required: true
+      selector:
+        text:
+    program:
+      required: true
+      selector:
+        select:
+          options: [P2, P3, P4, unassigned]
+    note:
+      selector:
+        text:
+          multiline: true
+import_run:
+  name: Import run
+  description: Import one complete measured curve. No files or remote URLs are opened.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    started_at:
+      required: true
+      example: '2026-01-01T23:00:00+01:00'
+      selector:
+        text:
+    duration_seconds:
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 28800
+          mode: box
+    energy_wh:
+      required: true
+      selector:
+        object:
+    program:
+      selector:
+        select:
+          options: [P2, P3, P4]
+    note:
+      selector:
+        text:
+          multiline: true

@@ -1,0 +1,50 @@
+{
+  "title": "Diskpilot",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Diskpilot",
+        "description": "Select your dishwasher power sensor. Price source and format can be changed later in Configure.",
+        "data": {
+          "name": "Appliance name",
+          "power_entity": "Power sensor",
+          "price_entity": "Price sensor (optional)"
+        }
+      }
+    },
+    "error": {
+      "invalid_power": "Select a power sensor measured in W or kW.",
+      "invalid_price": "The price sensor does not exist.",
+      "invalid_settings": "Check the fields, threshold order, currency code and positive price multiplier."
+    },
+    "abort": {
+      "already_configured": "This power sensor is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Diskpilot",
+        "description": "History is preserved. New detection thresholds apply after an active run.",
+        "data": {
+          "price_entity": "Price sensor (optional)",
+          "price_attributes": "Attributes containing future price lists (comma separated)",
+          "start_key": "Price interval start field",
+          "end_key": "Price interval end field",
+          "value_key": "Price value field",
+          "price_multiplier": "Convert price to currency/kWh (1 for SEK/kWh, 0.01 for öre/kWh)",
+          "currency": "Currency code",
+          "horizon_hours": "Finish within this many hours",
+          "start_w": "Activity starts above (W)",
+          "stop_w": "Standby below (W)",
+          "stop_minutes": "Confirm standby for (minutes)"
+        }
+      }
+    },
+    "error": {
+      "invalid_power": "Select a power sensor measured in W or kW.",
+      "invalid_price": "The price sensor does not exist.",
+      "invalid_settings": "Check the fields, threshold order, currency code and positive price multiplier."
+    }
+  }
+}

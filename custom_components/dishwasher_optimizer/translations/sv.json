@@ -1,0 +1,50 @@
+{
+  "title": "Diskpilot",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Diskpilot",
+        "description": "Välj diskmaskinens effektsensor. Prissensor och prisformat kan ändras senare under Konfigurera.",
+        "data": {
+          "name": "Diskmaskinens namn",
+          "power_entity": "Effektsensor",
+          "price_entity": "Prissensor (valfri)"
+        }
+      }
+    },
+    "error": {
+      "invalid_power": "Välj en effektsensor med enheten W eller kW.",
+      "invalid_price": "Prissensorn finns inte.",
+      "invalid_settings": "Kontrollera fälten. Startgränsen måste vara högre än vilogränsen och omräkningsfaktorn måste vara positiv."
+    },
+    "abort": {
+      "already_configured": "Effektsensorn används redan av Diskpilot."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Diskpilot",
+        "description": "Historiken sparas när du ändrar inställningarna. Detektionsgränser börjar gälla efter pågående körning.",
+        "data": {
+          "price_entity": "Prissensor (valfri)",
+          "price_attributes": "Attribut med framtida prislistor (kommaseparerade)",
+          "start_key": "Fält för prisintervallets start",
+          "end_key": "Fält för prisintervallets slut",
+          "value_key": "Fält för pris",
+          "price_multiplier": "Omräkning till valuta/kWh (1 för SEK/kWh, 0.01 för öre/kWh)",
+          "currency": "Valutakod",
+          "horizon_hours": "Åter i vila inom antal timmar",
+          "start_w": "Aktivitet börjar över (W)",
+          "stop_w": "Viloläge under (W)",
+          "stop_minutes": "Bekräfta viloläge i (minuter)"
+        }
+      }
+    },
+    "error": {
+      "invalid_power": "Välj en effektsensor med enheten W eller kW.",
+      "invalid_price": "Prissensorn finns inte.",
+      "invalid_settings": "Kontrollera fälten. Startgränsen måste vara högre än vilogränsen och omräkningsfaktorn måste vara positiv."
+    }
+  }
+}
