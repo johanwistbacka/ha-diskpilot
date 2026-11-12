@@ -14,6 +14,8 @@ I Home Assistant 2026.11 finns Marketplace inbyggd som efterföljare till HACS. 
 4. Välj prissensor om du vill beräkna start och kostnad. Effektsensor är valfri och kan lämnas tom för planering med sparade profiler. Lägg till den senare under Konfigurera om du vill samla nya körningar.
 5. Lägg till kortet **Diskpilot** i dashboardens kortväljare. Kortets resurs registreras automatiskt när dashboardresurser hanteras via gränssnittet.
 
+Diskpilot visas under **Inställningar → Enheter och tjänster → Integrationer**. Där öppnar du integrationens inställningar för att välja eller byta sensorer.
+
 Manuell installation: kopiera `custom_components/dishwasher_optimizer` till din Home Assistant-konfiguration under `custom_components/` och starta om.
 
 Ännu finns ingen numrerad release. Använd huvudgrenen för utveckling. Kommande versioner distribueras som GitHub-releaser och kan uppdateras via Marketplace. Lokal historik ligger i Home Assistants `.storage`, utanför integrationskoden, och ersätts inte när koden uppdateras. Ta med `.storage` i dina säkerhetskopior.
