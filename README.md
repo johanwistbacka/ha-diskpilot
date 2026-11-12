@@ -2,14 +2,14 @@
 
 Diskpilot använder egna namngivna programprofiler för att beräkna billigaste start och elkostnad. Du ser alla program samtidigt. En effektsensor är valfri och behövs bara om du vill samla in nya körningar.
 
-**Utvecklingsversion.** Kräver Home Assistant 2026.11 eller senare. Ingen automatisk start av maskinen. Du väljer profilnamnen själv. Tidigare installerade P2/P3/P4-profiler och deras underlag bevaras vid uppdatering. Ingen personlig mätdata eller förinställd förbrukning följer med koden.
+**Beta 0.1.0-beta.1.** Kräver Home Assistant 2026.11 eller senare och är testad lokalt med 2026.11.1. Ingen automatisk start av maskinen. Du väljer profilnamnen själv. Tidigare installerade P2/P3/P4-profiler och deras underlag bevaras vid uppdatering. Ingen personlig mätdata eller förinställd förbrukning följer med koden. Installation i användarens produktionsmiljö är ännu inte verifierad.
 
 ## Installation och uppdateringar
 
 I Home Assistant 2026.11 finns Marketplace inbyggd som efterföljare till HACS. Projektet använder samma struktur för en custom integration och ett publikt GitHub-repo.
 
 1. Lägg till `https://github.com/johanwistbacka/ha-diskpilot` som eget repo i Marketplace, typ **Integration**.
-2. Installera och starta om Home Assistant.
+2. Aktivera repots **Pre-release**-val för att se betaversioner. Välj **0.1.0-beta.1**, installera och starta om Home Assistant.
 3. Lägg till **Diskpilot** under Inställningar → Enheter och tjänster.
 4. Välj prissensor om du vill beräkna start och kostnad. Effektsensor är valfri och kan lämnas tom för planering med sparade profiler. Lägg till den senare under Konfigurera om du vill samla nya körningar.
 5. Ange eventuella profilnamn, ett per rad. En valfri energisensor för samma apparat kan användas som kontroll av totalförbrukningen.
@@ -19,7 +19,13 @@ Diskpilot visas under **Inställningar → Enheter och tjänster → Integration
 
 Manuell installation: kopiera `custom_components/dishwasher_optimizer` till din Home Assistant-konfiguration under `custom_components/` och starta om.
 
-Ännu finns ingen numrerad release. Använd huvudgrenen för utveckling. Kommande versioner distribueras som GitHub-releaser och kan uppdateras via Marketplace. Lokal historik ligger i Home Assistants `.storage`, utanför integrationskoden, och ersätts inte när koden uppdateras. Ta med `.storage` i dina säkerhetskopior.
+Den numrerade betan finns under [GitHub Releases](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.1) och är markerad som pre-release. Marketplace/HACS hämtar integrationsfilerna från den valda taggen; någon separat ZIP-asset krävs inte. Huvudgrenen används för fortsatt utveckling. Se [ändringsloggen](CHANGELOG.md).
+
+### Säkerhetskopia och återgång
+
+Ta en Home Assistant-säkerhetskopia före installation eller uppdatering, inklusive konfigurationens `.storage`, och spara återställningsnyckeln. Lokal historik och profiler ligger i `.storage`, utanför integrationskoden, och ersätts inte vid en normal koduppdatering.
+
+Om problem uppstår kan Diskpilot inaktiveras under Enheter och tjänster och Home Assistant startas om. Om gränssnittet inte går att nå, använd din befintliga filåtkomst för att flytta integrationsmappen `custom_components/dishwasher_optimizer` ut ur `custom_components` och starta om. Behåll `.storage` för en senare ominstallation. Återställ säkerhetskopian om hela installationen behöver återställas. Återgång till äldre utvecklingskod kräver en matchande säkerhetskopia när dess lagringsformat inte stöder egna profil-ID:n.
 
 ## Prissensor
 
@@ -86,7 +92,7 @@ type: custom:diskpilot-card
 title: Diskmaskinen
 ```
 
-Har du flera maskiner väljer du vilken i kortets visuella inställningar. YAML-baserade dashboardresurser ändras inte automatiskt. Lägg i så fall till modulen `/dishwasher_optimizer/diskpilot-card.js?v=0.0.0` bland dina resurser.
+Har du flera maskiner väljer du vilken i kortets visuella inställningar. YAML-baserade dashboardresurser ändras inte automatiskt. Lägg i så fall till modulen `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.1` bland dina resurser.
 
 ## Åtgärder för export, import och märkning
 
