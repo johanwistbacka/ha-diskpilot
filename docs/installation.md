@@ -2,9 +2,7 @@
 
 Anvisningarna gäller **0.1.0-beta.3** och Home Assistant **2026.11 eller senare**. Diskpilot installeras som en integration. Dashboard-kortet följer med samma paket.
 
-**Beta.3 är förberedd men ännu inte publicerad.** Installationsstegen för den gäller efter publicering. Senast publicerad är [beta.2](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.2).
-
-[Tillbaka till README](../README.md) · [GitHub Releases](https://github.com/johanwistbacka/ha-diskpilot/releases)
+[Tillbaka till README](../README.md) · [Hämta beta.3](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.3)
 
 ## Innan du börjar
 
@@ -86,7 +84,7 @@ Diskpilot startar aldrig själva apparaten. Profilnamnet och att hela körningen
 3. Starta om Home Assistant och ladda om dashboarden.
 4. Kontrollera att dina profilnamn och antalet körningar finns kvar.
 
-Du behöver inte lägga till integrationen på nytt. Sparade profiler och körningar från beta.1 och beta.2 bevaras vid en normal uppdatering. Beta.2 kräver administratör för profil- och registreringsåtgärder.
+Du behöver inte lägga till integrationen på nytt. Sparade profiler och körningar från beta.1 och beta.2 bevaras vid en normal uppdatering. Från beta.2 krävs administratör för profil- och registreringsåtgärder.
 
 Från beta.3 kräver automatisk insamling normalt 30 sekunders aktivitet över startgränsen. Tiden ändras under **Konfigurera → Bekräfta aktivitet** (0–120 sekunder). 0 ger tidigare direktstart.
 
@@ -96,7 +94,7 @@ För återställning och återgång, se [säkerhetskopia och återgång](../READ
 
 Använd detta alternativ om du installerar utan Marketplace:
 
-1. Hämta **Source code (zip)** från [beta.3-releasen, efter publicering](https://github.com/johanwistbacka/ha-diskpilot/releases) och packa upp arkivet.
+1. Hämta **Source code (zip)** från [beta.3-releasen](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.3) och packa upp arkivet.
 2. Kopiera hela mappen `custom_components/dishwasher_optimizer` till din Home Assistant-konfigurationsmapp, under `custom_components/`. Ta med mappen `www` och alla dess filer.
 3. Kontrollera att sökvägen är `custom_components/dishwasher_optimizer/manifest.json`, utan en extra `ha-diskpilot-…`-mapp mellan nivåerna. Konfigurationsmappen är den som innehåller `configuration.yaml`.
 4. Starta om Home Assistant och fortsätt med [att lägga till integrationen](#2-lägg-till-integrationen).
