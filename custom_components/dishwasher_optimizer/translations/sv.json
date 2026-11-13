@@ -44,7 +44,8 @@
           "stop_w": "Viloläge under (W)",
           "stop_minutes": "Bekräfta viloläge i (minuter)",
           "power_entity": "Effektsensor (valfri)",
-          "energy_entity": "Energisensor för apparaten (valfri, ackumulerad Wh/kWh)"
+          "energy_entity": "Energisensor för apparaten (valfri, ackumulerad Wh/kWh)",
+          "start_seconds": "Bekräfta aktivitet i (sekunder, 0 = direkt)"
         }
       }
     },

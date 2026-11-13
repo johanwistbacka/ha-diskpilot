@@ -44,7 +44,8 @@
           "stop_w": "Standby below (W)",
           "stop_minutes": "Confirm standby for (minutes)",
           "power_entity": "Power sensor (optional)",
-          "energy_entity": "Appliance energy meter (optional, cumulative Wh/kWh)"
+          "energy_entity": "Appliance energy meter (optional, cumulative Wh/kWh)",
+          "start_seconds": "Confirm activity for (seconds, 0 = immediate)"
         }
       }
     },

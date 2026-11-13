@@ -50,6 +50,9 @@ def settings_schema(values, *, setup=False):
         fields[vol.Required("stop_minutes", default=values["stop_minutes"])] = vol.All(
             vol.Coerce(int), vol.Range(min=2, max=30)
         )
+        fields[vol.Required("start_seconds", default=values["start_seconds"])] = vol.All(
+            vol.Coerce(int), vol.Range(min=0, max=120)
+        )
     return vol.Schema(fields)
 
 

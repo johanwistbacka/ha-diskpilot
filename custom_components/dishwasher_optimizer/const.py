@@ -15,6 +15,7 @@ DEFAULTS = {
     "currency": "SEK",
     "horizon_hours": 24,
     "start_w": 5.0,
+    "start_seconds": 30,
     "stop_w": 1.0,
     "stop_minutes": 10,
 }
