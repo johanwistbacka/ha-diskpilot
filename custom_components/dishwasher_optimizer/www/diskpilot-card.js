@@ -50,8 +50,8 @@ class DiskpilotCard extends HTMLElement {
     if(current)this._registrationUpdate?.(current.attributes);
     if (signature !== this._signature) { this._signature = signature; this.render(); }
   }
-  getCardSize() { return 8; }
-  getGridOptions() { return { columns: 12, rows: 8, min_columns: 6 }; }
+  getCardSize() { return 4; }
+  getGridOptions() { return { columns: 12, rows: "auto", min_columns: 6 }; }
   async service(entryId, service, data) {
     const result = await this._hass.callWS({type:"call_service",domain:"dishwasher_optimizer",service,service_data:{entry_id:entryId,...data},return_response:true});
     return result.response;
@@ -65,10 +65,18 @@ class DiskpilotCard extends HTMLElement {
     const editing = active?.matches('input, select, button, summary') ? {
       node: active,
       label: active.getAttribute("aria-label"),
+      key: active.getAttribute("data-focus-key"),
       start: active.selectionStart,
       end: active.selectionEnd,
       direction: active.selectionDirection,
     } : null;
+    this._openPrograms ||= new Set();
+    // Capture native disclosure state before a price update replaces its DOM.
+    for (const details of root.querySelectorAll("details.program")) {
+      const key = details.dataset.programKey;
+      if (details.open) this._openPrograms.add(key);
+      else this._openPrograms.delete(key);
+    }
     root.replaceChildren();
     const style = el("style");
     style.textContent = `
@@ -77,10 +85,16 @@ class DiskpilotCard extends HTMLElement {
       h3 { font-size: 16px; margin: 24px 0 8px; }
       p { margin: 6px 0 14px; line-height: 1.5; }
       .muted, .note { color: var(--secondary-text-color); font-size: 13px; overflow-wrap:anywhere; }
-      .program { padding: 14px 0; border-bottom: 1px solid var(--divider-color); }
-      .heading { display: flex; gap: 12px; justify-content: space-between; align-items: baseline; }
-      .heading strong { min-width:0;overflow-wrap:anywhere; }
-      .cost { font-size: 22px; font-weight: 600; white-space: nowrap; }
+      details.program { margin: 0; border-bottom: 1px solid var(--divider-color); }
+      .program > summary { display:grid;grid-template-columns:minmax(0,1fr) auto 12px;gap:4px 12px;align-items:center;min-height:64px;padding:12px 2px;box-sizing:border-box;line-height:1.45;list-style:none; }
+      .program > summary::-webkit-details-marker { display:none; }
+      .program > summary::after { content:"";grid-column:3;grid-row:1 / 3;width:7px;height:7px;border:solid var(--secondary-text-color);border-width:0 2px 2px 0;transform:rotate(45deg);justify-self:center; }
+      .program[open] > summary::after { transform:rotate(225deg); }
+      .program-name { grid-column:1;grid-row:1;min-width:0;overflow-wrap:anywhere;font-size:15px;font-weight:600; }
+      .cost { grid-column:2;grid-row:1;font-size:20px;font-weight:600;white-space:nowrap; }
+      .start { grid-column:1 / 3;grid-row:2;color:var(--secondary-text-color);font-size:13px; }
+      .program-body { padding:0 2px 12px; }
+      .program-body p:last-child { margin-bottom:0; }
       dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 10px 0 0; }
       dt { color: var(--secondary-text-color); font-size: 12px; } dd { margin: 2px 0 0; font-size: 14px; }
       .run { padding: 10px 0; border-bottom: 1px solid var(--divider-color); }
@@ -94,7 +108,7 @@ class DiskpilotCard extends HTMLElement {
       .preview { padding:12px;border:1px solid var(--divider-color);border-radius:8px;margin:12px 0; } svg {width:100%;height:70px;color:var(--primary-color);}
       select { background: var(--card-background-color); color: var(--primary-text-color); border: 1px solid var(--divider-color); }
       button { background: var(--primary-color); color: var(--text-primary-color, white); border: 0; cursor: pointer; }
-      button:disabled { opacity: .6; cursor: wait; } button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 3px; }
+      button:disabled { opacity: .6; cursor: wait; } button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 3px; }
       .error { color: var(--error-color); } .message { margin: 8px 0; min-height: 20px; }
       @media (max-width: 350px) { ha-card { padding: 14px; } dl { grid-template-columns: 1fr; } }
     `;
@@ -114,31 +128,43 @@ class DiskpilotCard extends HTMLElement {
       const program=profile.id;
       const sensor = states.find(s => s.attributes.program === program);
       const a = sensor?.attributes || {};
-      const section = el("section", undefined, "program");
-      const heading = el("div", undefined, "heading");
-      heading.append(el("strong", profile.name));
+      const section = el("details", undefined, "program");
+      const key = `${entryId}:${program}`;
+      section.dataset.programKey = key;
+      section.open = this._openPrograms.has(key);
+      section.addEventListener("toggle", () => {
+        if (!section.isConnected) return;
+        if (section.open) this._openPrograms.add(key);
+        else this._openPrograms.delete(key);
+      });
+      const heading = el("summary");
+      heading.setAttribute("data-focus-key", key);
+      heading.append(el("span", profile.name, "program-name"));
       const cost = sensor && !["unknown", "unavailable"].includes(sensor.state) ? Number(sensor.state) : null;
       heading.append(el("span", cost !== null ? `${number(cost)} ${a.currency || "SEK"}` : "—", "cost"));
+      heading.append(el("span", a.optimal_start ? `Starta helst ${time(a.optimal_start, this._hass)}` : "Starttid saknas", "start"));
       section.append(heading);
+      const body = el("div", undefined, "program-body");
       const dl = el("dl");
       for (const [label, value] of [
-        ["Bästa start", time(a.optimal_start, this._hass)], ["Åter i vila", time(a.optimal_end, this._hass)],
+        ["Åter i vila", time(a.optimal_end, this._hass)],
         ["Energi", a.energy_kwh != null ? `${number(a.energy_kwh, 3)} kWh` : "—"],
         ["Underlag", a.sample_count === 1 ? "1 märkt körning" : `${a.sample_count || 0} märkta körningar`],
       ]) { const group = el("div"); group.append(el("dt", label), el("dd", value)); dl.append(group); }
-      section.append(dl);
-      if (a.status !== "ok") section.append(el("p", STATUS[a.status] || "Samlar underlag", "note"));
-      else if (a.sample_count === 1) section.append(el("p", "Första uppskattningen · baserad på en körning", "note"));
-      if (a.saving != null) section.append(el("p", `Beräknad besparing mot start nu: ${number(a.saving)} ${a.currency}`, "note"));
+      body.append(dl);
+      if (a.status !== "ok") body.append(el("p", STATUS[a.status] || "Samlar underlag", "note"));
+      else if (a.sample_count === 1) body.append(el("p", "Första uppskattningen · baserad på en körning", "note"));
+      if (a.saving != null) body.append(el("p", `Beräknad besparing mot start nu: ${number(a.saving)} ${a.currency}`, "note"));
+      body.append(el("p", "Sluttiden avser återgång till viloläge. När disken är klar behöver verifieras separat.", "note"));
+      section.append(body);
       card.append(section);
     }
-    card.append(el("p", "Sluttiden avser återgång till viloläge. När disken är klar behöver verifieras separat.", "note"));
     if(!profiles.length)card.append(el("p","Lägg till egna profiler och importera deras körningar för att börja planera."));
     renderProfileControls.call(this,card,entryId,profiles,el,number);
     renderRegistration.call(this,card,entryId,profiles,status.attributes,el,number);
     // HA can refresh these sensors while the user is typing a profile name.
     if (editing) {
-      const replacement = editing.node.isConnected ? editing.node : editing.label ? [...root.querySelectorAll('input, select, button, summary')].find(input => input.getAttribute("aria-label") === editing.label) : null;
+      const replacement = editing.node.isConnected ? editing.node : [...root.querySelectorAll('input, select, button, summary')].find(input => editing.key ? input.getAttribute("data-focus-key") === editing.key : editing.label && input.getAttribute("aria-label") === editing.label);
       if (replacement) {
         replacement.focus({preventScroll:true});
         if (typeof editing.start === "number" && typeof replacement.setSelectionRange === "function") replacement.setSelectionRange(editing.start, editing.end, editing.direction);
