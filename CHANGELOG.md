@@ -1,5 +1,21 @@
 # Ändringslogg
 
+## 0.1.0-beta.4 – förberedd, inte publicerad
+
+Korrigerar tre reproducerade fel i beta.3. Kräver fortsatt Home Assistant 2026.11 eller senare. Säkerhetskopiera konfigurationen inklusive `.storage` före uppdatering.
+
+- En filimport som fortfarande väntar på parsning avvisas om integrationen har stängts av eller laddats om. Den gamla instansen får inte skriva över nyare profil- och körningsdata.
+- Efter mer än tre minuter utan sampling krävs en ny observerad återgång till vila för att nästa start ska räknas som komplett. Återkomst på mellaneffekt, exempelvis 2,4 W, återställer inte säkerheten om starten. Ofullständiga körningar utesluts från profilerna.
+- Bekräftade automatiska avslut begär en skrivning utan extra väntetid, även inom den normala 30-sekundersgränsen för löpande lagring. Körningen ska inte återläsas som avbruten för att avslutet aldrig begärde en skrivning.
+
+### Verifiering och begränsningar
+
+- 226 Python-tester och 18 JavaScript-tester. De tre ursprungliga kontrollfallen reproducerade felen före rättning; 16 nya permanenta testfall täcker också gränsvärden, verkliga HA Store-skrivningar och återinläsning, samt filimport till nya och befintliga profiler vid omladdning.
+- Lagringsformat, profil-ID:n, minutenergi, prisberäkning, filformat, registreringsflöden och MIT-licens är oförändrade. Inga nya runtime-beroenden.
+- Rättningen återskapar inte tidigare saknad mätdata eller överskrivna profiler. Granska misstänkta äldre underlag och använd säkerhetskopia vid behov.
+- Återgång till beta.3 kräver ingen datamigrering, men återinför dessa fel. Beta.3-taggen ändras inte.
+- En begärd lagringsskrivning är inte en garanti mot strömavbrott innan disken har hunnit skrivas eller mot lagringsfel. Fysisk mätarnoggrannhet, riktiga avtalspriser och produktionsinstallation är fortsatt inte verifierade. Tidigare dokumenterade begränsningar kvarstår.
+
 ## 0.1.0-beta.3 – 2026-11-13
 
 Kräver Home Assistant 2026.11 eller senare. Säkerhetskopiera konfigurationen inklusive `.storage` före uppdatering.
