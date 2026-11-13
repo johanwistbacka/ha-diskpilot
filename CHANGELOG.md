@@ -1,6 +1,6 @@
 # Ändringslogg
 
-## 0.1.0-beta.4 – förberedd, inte publicerad
+## 0.1.0-beta.4 – 2026-11-13
 
 Korrigerar tre reproducerade fel i beta.3. Kräver fortsatt Home Assistant 2026.11 eller senare. Säkerhetskopiera konfigurationen inklusive `.storage` före uppdatering.
 
