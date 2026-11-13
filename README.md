@@ -2,7 +2,7 @@
 
 Diskpilot använder egna namngivna programprofiler för att beräkna billigaste start och elkostnad. Du ser alla program samtidigt. En effektsensor är valfri och behövs bara om du vill samla in nya körningar.
 
-**Beta 0.1.0-beta.2.** Kräver Home Assistant 2026.11 eller senare och är testad lokalt med 2026.11.1. Ingen automatisk start av maskinen. Du väljer profilnamnen själv. Tidigare installerade P2/P3/P4-profiler och deras underlag bevaras vid uppdatering. Ingen personlig mätdata eller förinställd förbrukning följer med koden. Installation i användarens produktionsmiljö är ännu inte verifierad.
+**Förberedd beta 0.1.0-beta.3 – inte publicerad.** Kräver Home Assistant 2026.11 eller senare och är testad lokalt med 2026.11.1. Ingen automatisk start av maskinen. Du väljer profilnamnen själv. Tidigare installerade P2/P3/P4-profiler och deras underlag bevaras vid uppdatering. Ingen personlig mätdata eller förinställd förbrukning följer med koden. Installation i användarens produktionsmiljö är ännu inte verifierad.
 
 ## Installation och uppdateringar
 
@@ -10,19 +10,21 @@ Diskpilot använder egna namngivna programprofiler för att beräkna billigaste 
 
 Snabbstart för Home Assistant 2026.11 eller senare:
 
-1. Installera **0.1.0-beta.2** via Marketplace med **Pre-release** aktiverat. De fullständiga stegen finns i guiden.
+1. Efter publicering: installera **0.1.0-beta.3** via Marketplace med **Pre-release** aktiverat. De fullständiga stegen finns i guiden.
 2. Lägg till **Diskpilot** under **Inställningar → Enheter och tjänster → Lägg till integration**. Sensorer och profilnamn är valfria vid start.
 3. Lägg till **Diskpilot** i dashboardens kortväljare och tillför egna profilkörningar genom filimport eller registrering.
 
 Guiden innehåller även manuell installation, uppdatering från beta.1 och felsökning. Profilhantering och registreringsåtgärder kräver administratörsbehörighet. Ta en säkerhetskopia före installation eller uppdatering.
 
-Den numrerade betan finns under [GitHub Releases](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.2) och är markerad som pre-release. Marketplace/HACS hämtar integrationsfilerna från den valda taggen; någon separat ZIP-asset krävs inte. Huvudgrenen används för fortsatt utveckling. Se [ändringsloggen](CHANGELOG.md).
+Beta.3 är en förberedd kandidat. Senast publicerad är [beta.2](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.2). När beta.3 publiceras blir den en pre-release under [GitHub Releases](https://github.com/johanwistbacka/ha-diskpilot/releases). Marketplace/HACS hämtar integrationsfilerna från den valda taggen; någon separat ZIP-asset krävs inte. Huvudgrenen används för fortsatt utveckling. Se [ändringsloggen](CHANGELOG.md).
 
 ### Säkerhetskopia och återgång
 
 Ta en Home Assistant-säkerhetskopia före installation eller uppdatering, inklusive konfigurationens `.storage`, och spara återställningsnyckeln. Lokal historik och profiler ligger i `.storage`, utanför integrationskoden, och ersätts inte vid en normal koduppdatering.
 
-Återgång från beta.2 till beta.1: sparade profiler och körningar har samma format, men registreringsutkast stöds inte i beta.1. Spara eller kasta utkast före återgång och behåll säkerhetskopian.
+Återgång från beta.3 till beta.2 kräver ingen datamigrering. Beta.2 ignorerar inställningen `start_seconds` och återgår till direkt automatisk start vid startgränsen.
+
+Återgång från beta.2 eller beta.3 till beta.1: sparade profiler och körningar har samma format, men registreringsutkast stöds inte i beta.1. Spara eller kasta utkast före återgång och behåll säkerhetskopian.
 
 Om problem uppstår kan Diskpilot inaktiveras under Enheter och tjänster och Home Assistant startas om. Om gränssnittet inte går att nå, använd din befintliga filåtkomst för att flytta integrationsmappen `custom_components/dishwasher_optimizer` ut ur `custom_components` och starta om. Behåll `.storage` för en senare ominstallation. Återställ säkerhetskopian om hela installationen behöver återställas. Återgång till äldre utvecklingskod kräver en matchande säkerhetskopia när dess lagringsformat inte stöder egna profil-ID:n.
 
@@ -68,7 +70,7 @@ Vid uppdatering från den tidigare utvecklingsversionen bevaras profilernas ID o
 
 Från beta.2 finns **Registrera profil** i kortet: registrera från nu med manuellt eller tidsbestämt avslut, eller välj ett tidigare intervall ur Home Assistants Recorder. Båda flödena ger ett separat utkast med kurva och justerbara gränser. Körningen tillförs först efter granskning och bekräftelse, till en ny eller befintlig profil. Se [registreringsflödet och begränsningarna](docs/profile-registration.md).
 
-När en effektsensor är ansluten börjar insamlingen automatiskt. Effekt över startgränsen (standard 5 W) behöver i utvecklingsversionen bestå under **Bekräfta aktivitet** (standard 30 sekunder, valbart 0–120). Därefter sparas körningen från den första höga avläsningen, inklusive energin under bekräftelsen. En kort knapptryckning följd av fördröjd start räknas därför inte som en körning. Sätt 0 för den tidigare direkta starten. En verklig programstart som bara ger korta effekttoppar kan kräva en kortare bekräftelsetid; kontrollera mot apparatens kurva. Under vilogränsen (standard 1 W) i tio minuter bekräftar slutet. Bekräftelsetiden räknas inte in i energi eller programprofil. En lång avslutning kring 3 W behålls i mätningen.
+När en effektsensor är ansluten börjar insamlingen automatiskt. Effekt över startgränsen (standard 5 W) behöver från beta.3 bestå under **Bekräfta aktivitet** (standard 30 sekunder, valbart 0–120). Därefter sparas körningen från den första höga avläsningen, inklusive energin under bekräftelsen. En kort knapptryckning följd av fördröjd start räknas därför inte som en körning. Sätt 0 för den tidigare direkta starten. En verklig programstart som bara ger korta effekttoppar kan kräva en kortare bekräftelsetid; kontrollera mot apparatens kurva. Under vilogränsen (standard 1 W) i tio minuter bekräftar slutet. Bekräftelsetiden räknas inte in i energi eller programprofil. En lång avslutning kring 3 W behålls i mätningen.
 
 Märk programmet under **Senaste körningarna** i kortet. Märkningen går att ändra eller ta bort. Varje programprofil räknas om från sina märkta, fullständiga körningar. Omärkta körningar används inte för att gissa programnamn.
 
@@ -82,7 +84,7 @@ Som första underlag räcker en märkt körning per program. Kortet visar när u
 
 ## Dashboard-kort
 
-Kortet ingår i integrationen och uppdateras tillsammans med den. Det visar alla profilernas kostnad, bästa start, återgång till vila, energi, underlag och besparing mot start nu. När effektmätning är aktiverad kan kortet också märka de fem senaste körningarna. Äldre körningar nås via åtgärderna nedan.
+Kortet ingår i integrationen och uppdateras tillsammans med den. Programnamn, pris och bästa start syns direkt; klicka på programmet för att fälla ut energi, sluttid, underlag och besparing. Det visar alla profilernas kostnad, bästa start, återgång till vila, energi, underlag och besparing mot start nu. När effektmätning är aktiverad kan kortet också märka de fem senaste körningarna. Äldre körningar nås via åtgärderna nedan.
 
 **Åter i vila betyder inte verifierad färdigtid för disken.** Detta behöver kontrolleras mot maskinens färdigindikering. Kostnaden beräknas från profilens uppmätta tidskurva och kan inte verifiera om sensorn mäter hela maskinens förbrukning.
 
@@ -93,7 +95,7 @@ type: custom:diskpilot-card
 title: Diskmaskinen
 ```
 
-Har du flera maskiner väljer du vilken i kortets visuella inställningar. YAML-baserade dashboardresurser ändras inte automatiskt. Lägg i så fall till modulen `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.2` bland dina resurser.
+Har du flera maskiner väljer du vilken i kortets visuella inställningar. YAML-baserade dashboardresurser ändras inte automatiskt. Lägg i så fall till modulen `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.3` bland dina resurser.
 
 ## Åtgärder för export, import och märkning
 
