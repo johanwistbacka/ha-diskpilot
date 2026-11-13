@@ -6,18 +6,15 @@ Diskpilot använder egna namngivna programprofiler för att beräkna billigaste 
 
 ## Installation och uppdateringar
 
-I Home Assistant 2026.11 finns Marketplace inbyggd som efterföljare till HACS. Projektet använder samma struktur för en custom integration och ett publikt GitHub-repo.
+**[Installationsguide: nyinstallation, uppdatering, sensorer och dashboard-kort](docs/installation.md)**
 
-1. Lägg till `https://github.com/johanwistbacka/ha-diskpilot` som eget repo i Marketplace, typ **Integration**.
-2. Aktivera repots **Pre-release**-val för att se betaversioner. Välj **0.1.0-beta.2**, installera och starta om Home Assistant.
-3. Lägg till **Diskpilot** under Inställningar → Enheter och tjänster.
-4. Välj prissensor om du vill beräkna start och kostnad. Effektsensor är valfri och kan lämnas tom för planering med sparade profiler. Lägg till den senare under Konfigurera om du vill samla nya körningar.
-5. Ange eventuella profilnamn, ett per rad. En valfri energisensor för samma apparat kan användas som kontroll av totalförbrukningen.
-6. Lägg till kortet **Diskpilot** i dashboardens kortväljare. Kortets resurs registreras automatiskt när dashboardresurser hanteras via gränssnittet.
+Snabbstart för Home Assistant 2026.11 eller senare:
 
-Diskpilot visas under **Inställningar → Enheter och tjänster → Integrationer**. Där öppnar du integrationens inställningar för att välja eller byta sensorer.
+1. Installera **0.1.0-beta.2** via Marketplace med **Pre-release** aktiverat. De fullständiga stegen finns i guiden.
+2. Lägg till **Diskpilot** under **Inställningar → Enheter och tjänster → Lägg till integration**. Sensorer och profilnamn är valfria vid start.
+3. Lägg till **Diskpilot** i dashboardens kortväljare och tillför egna profilkörningar genom filimport eller registrering.
 
-Manuell installation: kopiera `custom_components/dishwasher_optimizer` till din Home Assistant-konfiguration under `custom_components/` och starta om.
+Guiden innehåller även manuell installation, uppdatering från beta.1 och felsökning. Profilhantering och registreringsåtgärder kräver administratörsbehörighet. Ta en säkerhetskopia före installation eller uppdatering.
 
 Den numrerade betan finns under [GitHub Releases](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.2) och är markerad som pre-release. Marketplace/HACS hämtar integrationsfilerna från den valda taggen; någon separat ZIP-asset krävs inte. Huvudgrenen används för fortsatt utveckling. Se [ändringsloggen](CHANGELOG.md).
 
