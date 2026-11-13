@@ -210,8 +210,10 @@ class Collector:
             and self.last_w > self.start_w
         )
         if watts is None or (
-            self.last_t is not None and now - self.last_t > 180 and watts > self.start_w
+            self.last_t is not None and now - self.last_t > 180 and watts >= self.stop_w
         ):
+            # Intermediate power after a gap is not proof of an observed start.
+            # Only a fresh reading below stop_w can arm a complete measurement.
             self.armed = False
         if self.blocked or watts is None or watts <= self.start_w:
             self.candidate = None

@@ -165,7 +165,7 @@ class Runtime:
             elif self.collector.pending_end != previous_end:
                 self._energy_end = reading
         if was_active or self.collector.active is not None:
-            self.schedule_save()
+            self.schedule_save(force=run is not None)
         async_dispatcher_send(self.hass, self.signal)
 
     def energy_reading(self):
@@ -196,10 +196,11 @@ class Runtime:
         }
 
     @callback
-    def schedule_save(self):
+    def schedule_save(self, *, force=False):
         # A debounce would postpone every write while the sensor changes rapidly.
+        # Completed runs must be written even inside the normal checkpoint window.
         now = self.hass.loop.time()
-        if now - self._last_save_request >= 30:
+        if force or now - self._last_save_request >= 30:
             self._last_save_request = now
             self.store.async_delay_save(self.storage_data, 0)
 
@@ -353,9 +354,12 @@ class Runtime:
 
     async def async_import_file(self, filename, content, *, profile_id=None, name=None):
         """Validate all data and the destination before adding any runs."""
+        self._require_open()
         suggested_name, runs = await self.hass.async_add_executor_job(
             parse_profile_file, filename, content
         )
+        # A reload may have replaced this runtime while the file was parsed.
+        self._require_open()
         self.validate_file_runs(runs)
         if profile_id:
             if profile_id not in self.profiles:
@@ -388,18 +392,18 @@ class Runtime:
         )
 
     def _draft(self, draft_id):
-        self._require_registration_open()
+        self._require_open()
         if not self.registration or self.registration.draft_id != draft_id:
             raise ValueError("Utkastet har ändrats eller tagits bort. Öppna registreringen igen.")
         return self.registration
 
-    def _require_registration_open(self):
+    def _require_open(self):
         if self._closed:
             raise ValueError("Diskpilot är avstängd. Ladda integrationen igen.")
 
     async def async_start_registration(self, end_at=None):
         async with self._registration_lock:
-            self._require_registration_open()
+            self._require_open()
             if self.registration:
                 raise ValueError("Granska eller kasta det befintliga utkastet först.")
             entity = self.config["power_entity"]
@@ -464,7 +468,7 @@ class Runtime:
 
     async def async_history_registration(self, start, end):
         async with self._registration_lock:
-            self._require_registration_open()
+            self._require_open()
             if self.registration:
                 raise ValueError("Granska eller kasta det befintliga utkastet först.")
             entity = self.config["power_entity"]

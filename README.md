@@ -2,7 +2,7 @@
 
 Diskpilot använder egna namngivna programprofiler för att beräkna billigaste start och elkostnad. Du ser alla program samtidigt. En effektsensor är valfri och behövs bara om du vill samla in nya körningar.
 
-**Beta 0.1.0-beta.3.** Kräver Home Assistant 2026.11 eller senare och är testad lokalt med 2026.11.1. Ingen automatisk start av maskinen. Du väljer profilnamnen själv. Tidigare installerade P2/P3/P4-profiler och deras underlag bevaras vid uppdatering. Ingen personlig mätdata eller förinställd förbrukning följer med koden. Installation i användarens produktionsmiljö är ännu inte verifierad.
+**Beta 0.1.0-beta.4.** Kräver Home Assistant 2026.11 eller senare och är testad lokalt med 2026.11.1. Ingen automatisk start av maskinen. Du väljer profilnamnen själv. Tidigare installerade P2/P3/P4-profiler och deras underlag bevaras vid uppdatering. Ingen personlig mätdata eller förinställd förbrukning följer med koden. Installation i användarens produktionsmiljö är ännu inte verifierad.
 
 ## Installation och uppdateringar
 
@@ -10,21 +10,23 @@ Diskpilot använder egna namngivna programprofiler för att beräkna billigaste 
 
 Snabbstart för Home Assistant 2026.11 eller senare:
 
-1. Installera **0.1.0-beta.3** via Marketplace med **Pre-release** aktiverat. De fullständiga stegen finns i guiden.
+1. Installera **0.1.0-beta.4** via Marketplace med **Pre-release** aktiverat. De fullständiga stegen finns i guiden.
 2. Lägg till **Diskpilot** under **Inställningar → Enheter och tjänster → Lägg till integration**. Sensorer och profilnamn är valfria vid start.
 3. Lägg till **Diskpilot** i dashboardens kortväljare och tillför egna profilkörningar genom filimport eller registrering.
 
 Guiden innehåller även manuell installation, uppdatering från beta.1 och felsökning. Profilhantering och registreringsåtgärder kräver administratörsbehörighet. Ta en säkerhetskopia före installation eller uppdatering.
 
-Den numrerade betan finns under [GitHub Releases](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.3) och är markerad som pre-release. Marketplace/HACS hämtar integrationsfilerna från den valda taggen; någon separat ZIP-asset krävs inte. Huvudgrenen används för fortsatt utveckling. Se [ändringsloggen](CHANGELOG.md).
+Den numrerade betan finns under [GitHub Releases](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.4) och är markerad som pre-release. Marketplace/HACS hämtar integrationsfilerna från den valda taggen; någon separat ZIP-asset krävs inte. Huvudgrenen används för fortsatt utveckling. Se [ändringsloggen](CHANGELOG.md).
 
 ### Säkerhetskopia och återgång
 
 Ta en Home Assistant-säkerhetskopia före installation eller uppdatering, inklusive konfigurationens `.storage`, och spara återställningsnyckeln. Lokal historik och profiler ligger i `.storage`, utanför integrationskoden, och ersätts inte vid en normal koduppdatering.
 
-Återgång från beta.3 till beta.2 kräver ingen datamigrering. Beta.2 ignorerar inställningen `start_seconds` och återgår till direkt automatisk start vid startgränsen.
+Återgång från beta.4 till beta.3 kräver ingen datamigrering men återinför de rättade felen. Uppdateringen återskapar inte tidigare saknad mätdata eller överskrivna profiler; granska misstänkta underlag och använd säkerhetskopia vid behov.
 
-Återgång från beta.2 eller beta.3 till beta.1: sparade profiler och körningar har samma format, men registreringsutkast stöds inte i beta.1. Spara eller kasta utkast före återgång och behåll säkerhetskopian.
+Återgång från beta.3 eller beta.4 till beta.2 kräver ingen datamigrering. Beta.2 ignorerar inställningen `start_seconds` och återgår till direkt automatisk start vid startgränsen.
+
+Återgång från beta.2, beta.3 eller beta.4 till beta.1: sparade profiler och körningar har samma format, men registreringsutkast stöds inte i beta.1. Spara eller kasta utkast före återgång och behåll säkerhetskopian.
 
 Om problem uppstår kan Diskpilot inaktiveras under Enheter och tjänster och Home Assistant startas om. Om gränssnittet inte går att nå, använd din befintliga filåtkomst för att flytta integrationsmappen `custom_components/dishwasher_optimizer` ut ur `custom_components` och starta om. Behåll `.storage` för en senare ominstallation. Återställ säkerhetskopian om hela installationen behöver återställas. Återgång till äldre utvecklingskod kräver en matchande säkerhetskopia när dess lagringsformat inte stöder egna profil-ID:n.
 
@@ -76,7 +78,7 @@ Märk programmet under **Senaste körningarna** i kortet. Märkningen går att �
 
 Du kan fotografera programvalet vid start och senare lämna bilden tillsammans med datum/starttid och exporterad körning för analys. Bilden behöver visa programnumret och eventuella tillval. **Integrationen tolkar eller laddar inte upp bilder.** Bildens filtid ensam är ingen säker märkning, särskilt om maskinen har fördröjd start.
 
-Körningar lagras lokalt med id, starttid, tid till vila, energi per minut, programetikett, anteckning och kvalitetsmarkeringar. Första körningen efter installation kan vara påbörjad redan när insamlingen startar. Den märks då ofullständig. Avbrott, omstarter, byte av effektmätare och kända dataluckor utesluts från inlärning. När effektmätningen är avstängd fortsätter planeringen med de sparade profilerna. Oförändrade sensortillstånd samplas var 30:e sekund. Bekräftelsen kräver minst två observationer när tiden är större än noll. Saknade värden eller mer än tre minuter mellan observationer avbryter en startkandidat. Kandidater sparas inte som körningar och efter en omstart kan en pågående start därför markeras ofullständig. Körningarnas lagringsformat och profil-ID:n är oförändrade. Den valfria energimätarens startvärde tas vid första kandidaten, inte när bekräftelsen blir klar. Om en sensor fastnar utan att rapportera `unavailable` kan Diskpilot inte själv upptäcka det.
+Körningar lagras lokalt med id, starttid, tid till vila, energi per minut, programetikett, anteckning och kvalitetsmarkeringar. Första körningen efter installation kan vara påbörjad redan när insamlingen startar. Den märks då ofullständig. Avbrott, omstarter, byte av effektmätare och kända dataluckor utesluts från inlärning. När effektmätningen är avstängd fortsätter planeringen med de sparade profilerna. Oförändrade sensortillstånd samplas var 30:e sekund. Bekräftelsen kräver minst två observationer när tiden är större än noll. Saknade värden eller mer än tre minuter mellan observationer avbryter en startkandidat. Efter en samplingslucka på mer än tre minuter krävs åter observerad vila för att nästa start ska räknas som komplett; mellaneffekt räcker inte. Bekräftade avslut begär en skrivning utan extra väntetid även om senaste löpande skrivningen skedde för mindre än 30 sekunder sedan. Kandidater sparas inte som körningar och efter en omstart kan en pågående start därför markeras ofullständig. Körningarnas lagringsformat och profil-ID:n är oförändrade. Den valfria energimätarens startvärde tas vid första kandidaten, inte när bekräftelsen blir klar. Om en sensor fastnar utan att rapportera `unavailable` kan Diskpilot inte själv upptäcka det.
 
 En valfri ackumulerad energisensor i Wh eller kWh används som kontroll vid registrerade körningar. Mätarställningar jämförs vid start och första återgång till vila. Saknade värden eller en mätaråterställning redovisas separat och ersätter inte effektkurvan. Uppdateringsintervall kan ge skillnader mellan energimätaren och den integrerade kurvan.
 
@@ -95,7 +97,7 @@ type: custom:diskpilot-card
 title: Diskmaskinen
 ```
 
-Har du flera maskiner väljer du vilken i kortets visuella inställningar. YAML-baserade dashboardresurser ändras inte automatiskt. Lägg i så fall till modulen `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.3` bland dina resurser.
+Har du flera maskiner väljer du vilken i kortets visuella inställningar. YAML-baserade dashboardresurser ändras inte automatiskt. Lägg i så fall till modulen `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.4` bland dina resurser.
 
 ## Åtgärder för export, import och märkning
 
