@@ -48,6 +48,8 @@ class Runtime:
         self._last_save_request = float("-inf")
         self._energy_start = None
         self._energy_end = None
+        self._candidate_id = None
+        self._candidate_energy = None
         self.registration = None
         self._registration_lock = asyncio.Lock()
         self._registration_timer = None
@@ -125,10 +127,11 @@ class Runtime:
                 self.source_status = "ok"
             elif state.state not in ("unknown", "unavailable"):
                 self.source_status = "invalid_unit_or_value"
-        if self.collector.active is None:
+        if self.collector.active is None and self.collector.candidate is None:
             self.collector.start_w = self.config["start_w"]
             self.collector.stop_w = self.config["stop_w"]
             self.collector.stop_seconds = self.config["stop_minutes"] * 60
+            self.collector.start_seconds = self.config["start_seconds"]
         if self.registration and self.registration.stage == "recording":
             self.registration.sample(dt_util.utcnow().timestamp(), watts)
             if self.registration.stage == "review":
@@ -148,9 +151,14 @@ class Runtime:
                     run.meter_energy_kwh = self._energy_end - self._energy_start
                     run.meter_note = "available"
             self.runs.append(run)
+        start = self.collector.candidate or (self.collector.active if not was_active else None)
+        if start is not None and start.run_id != self._candidate_id:
+            self._candidate_id, self._candidate_energy = start.run_id, reading
         if not was_active and self.collector.active is not None:
-            self._energy_start = reading
+            self._energy_start = self._candidate_energy
             self._energy_end = None
+        if self.collector.active is None and self.collector.candidate is None:
+            self._candidate_id = self._candidate_energy = None
         if self.collector.active is not None:
             if self.collector.pending_end is None:
                 self._energy_end = None
@@ -204,6 +212,7 @@ class Runtime:
             or self.config["power_entity"] != previous_power
         ):
             self._energy_start = self._energy_end = None
+            self._candidate_energy = None
         if self.config["power_entity"] != previous_power:
             if self.registration and self.registration.stage == "recording":
                 self.registration.finish(dt_util.utcnow().timestamp(), None, "measurement_changed")

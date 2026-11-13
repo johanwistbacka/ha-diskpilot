@@ -123,7 +123,7 @@ class DiskpilotCard extends HTMLElement {
     const profiles = status.attributes.profiles || [];
     const states = Object.values(this._hass.states).filter(s => s.attributes.diskpilot_entry_id === entryId && s.attributes.program);
     const running = status.attributes.registration?.stage === "recording" ? "Registrering pågår" : status.attributes.registration?.stage === "review" ? "Utkast väntar på granskning" : status.state === "planner" ? "Planering med sparade profiler · effektmätning avstängd" : status.state === "running" ? "Körning pågår" : status.state === "source_unavailable" ? "Effektsensorn är inte tillgänglig" : "Redo att registrera nästa körning";
-    card.append(el("p", running, "muted"));
+    card.append(el("p", status.attributes.start_pending ? "Kontrollerar diskstart · inväntar ihållande aktivitet" : running, "muted"));
     for (const profile of profiles) {
       const program=profile.id;
       const sensor = states.find(s => s.attributes.program === program);

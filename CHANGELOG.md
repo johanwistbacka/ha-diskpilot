@@ -1,5 +1,13 @@
 # Ändringslogg
 
+## Unreleased
+
+- Bekräfta automatisk diskstart med ihållande aktivitet, standard 30 sekunder och valbart 0–120.
+- Korta effekttoppar följda av vänteläge skapar ingen programkörning.
+- Bevara den bekräftade körningens ursprungliga start, minutenergi och energimätarställning.
+- Visa väntande startbekräftelse i kortet. Oförändrat lagringsformat, import och MIT-licens.
+
+
 ## 0.1.0-beta.2 – 2026-11-12
 
 Ny beta med registrering av egna programprofiler från effektmätning eller sparad historik. Kräver fortsatt Home Assistant 2026.11 eller senare. Säkerhetskopiera konfigurationen inklusive `.storage` före uppdatering.

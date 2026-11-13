@@ -114,7 +114,9 @@ async def test_configurable_price_sensor_and_no_price_extrapolation(hass):
 
 
 async def test_kw_conversion_and_unavailable_not_zero(hass):
-    runtime = Runtime(hass, entry())
+    e = entry()
+    e.options = {"start_seconds": 0}  # Unit conversion, with explicit legacy immediate start.
+    runtime = Runtime(hass, e)
     hass.states.async_set("sensor.dishwasher_power", "0.2", {"unit_of_measurement": "kW"})
     runtime.sample()
     assert runtime.collector.last_w == 200

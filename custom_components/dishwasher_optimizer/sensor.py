@@ -77,6 +77,8 @@ class StatusSensor(BaseSensor):
             "version": VERSION,
             "power_entity": self.runtime.config["power_entity"],
             "registration": self.runtime.registration_summary(),
+            "start_pending": self.runtime.collector.candidate is not None,
+            "start_confirmation_seconds": self.runtime.config["start_seconds"],
         }
 
 

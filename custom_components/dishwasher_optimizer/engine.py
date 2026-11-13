@@ -126,10 +126,12 @@ class Run:
 class Collector:
     """Detect activity with hysteresis and keep low-power tails intact."""
 
-    def __init__(self, start_w=5.0, stop_w=1.0, stop_seconds=600):
+    def __init__(self, start_w=5.0, stop_w=1.0, stop_seconds=600, start_seconds=30):
         self.start_w = start_w
         self.stop_w = stop_w
         self.stop_seconds = stop_seconds
+        self.start_seconds = start_seconds
+        self.candidate: Run | None = None
         self.active: Run | None = None
         self.last_t: float | None = None
         self.last_w: float | None = None
@@ -188,15 +190,52 @@ class Collector:
         if watts is not None and watts < self.stop_w:
             self.armed = True
             self.blocked = False
-        if self.active is None and not self.blocked and watts is not None and watts > self.start_w:
-            self.active = Run(started_at=now)
-            if not self.armed:
-                self._issue("start_not_observed")
-            self.pending_end = None
+        if self.active is None:
+            self._consider_start(now, watts)
         self.last_t, self.last_w = now, watts
         if completed and (completed.duration_seconds < 120 or sum(completed.energy_wh) < 1):
             completed.issues.append("too_short")
         return completed
+
+    def _consider_start(self, now: float, watts: float | None) -> None:
+        """Confirm sustained activity; retain the first high sample and its energy.
+
+        A button press followed by display/delay power is discarded. Candidates
+        never enter persisted runs. Unknown data or a gap breaks confirmation.
+        """
+        continuous = (
+            self.last_t is not None
+            and now - self.last_t <= 180
+            and self.last_w is not None
+            and self.last_w > self.start_w
+        )
+        if watts is None or (
+            self.last_t is not None and now - self.last_t > 180 and watts > self.start_w
+        ):
+            self.armed = False
+        if self.blocked or watts is None or watts <= self.start_w:
+            self.candidate = None
+            return
+        if self.candidate is not None and not continuous:
+            self.candidate = None
+        if self.candidate is None:
+            self.candidate = Run(started_at=now)
+            if not self.armed:
+                self.candidate.issues.append("start_not_observed")
+        else:
+            try:
+                self.candidate.add(self.last_t, now, self.last_w)
+            except ValueError, TypeError, OverflowError:
+                if "invalid_energy" not in self.candidate.issues:
+                    self.candidate.issues.append("invalid_energy")
+                self.candidate.duration_seconds = now - self.candidate.started_at
+                count = math.ceil(self.candidate.duration_seconds / 60)
+                self.candidate.energy_wh.extend(
+                    [0.0] * max(0, count - len(self.candidate.energy_wh))
+                )
+        if now - self.candidate.started_at >= self.start_seconds:
+            self.active, self.candidate = self.candidate, None
+            self.pending_end = None
 
     def _issue(self, issue: str) -> None:
         if self.active and issue not in self.active.issues:
