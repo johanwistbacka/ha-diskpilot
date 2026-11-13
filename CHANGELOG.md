@@ -1,12 +1,23 @@
 # Ändringslogg
 
-## Unreleased
+## 0.1.0-beta.3 – 2026-11-13
 
+Kräver Home Assistant 2026.11 eller senare. Säkerhetskopiera konfigurationen inklusive `.storage` före uppdatering.
+
+- Kompakt programöversikt med pris och bästa start synliga. Klicka på programmet för att visa energi, sluttid, underlag och besparing. Öppet läge och tangentbordsfokus bevaras när priser uppdateras.
 - Bekräfta automatisk diskstart med ihållande aktivitet, standard 30 sekunder och valbart 0–120.
 - Korta effekttoppar följda av vänteläge skapar ingen programkörning.
 - Bevara den bekräftade körningens ursprungliga start, minutenergi och energimätarställning.
 - Visa väntande startbekräftelse i kortet. Oförändrat lagringsformat, import och MIT-licens.
+- Installationsguide för nyinstallation, uppdatering, sensorer och kortets resurser.
 
+### Verifiering och begränsningar
+
+- 210 Python-tester och 18 JavaScript-tester samt kod- och syntaxkontroller. En separat lokal HA-kontroll med syntetisk effekt verifierade vänteläge, bekräftad start, slutbekräftelse, starttid och energi mot en oberoende beräkning.
+- Befintliga profiler och körningar bevarades i lokaltestet. Ingen WashData-kod, AI-koppling eller nya runtime-beroenden ingår.
+- Återgång till beta.2 kräver ingen datamigrering; den äldre koden ignorerar `start_seconds`. Beta.2 börjar samla direkt vid startgränsen och kan därför åter inkludera fördröjd starts vänteläge.
+- Bekräftelsen sker vid sensoravläsningar eller den befintliga 30-sekunderstickern. Program med enbart korta startpulser kan behöva kortare bekräftelsetid eller 0. En kandidat sparas inte över omstart; otillräckligt observerad start markeras ofullständig.
+- Avslutslogiken är oförändrad. Återgång till vila bevisar inte färdig disk. Produktionsinstallation, fysisk mätarnoggrannhet och riktiga avtalspriser är fortfarande inte verifierade. Den kända begränsningen med täta prisuppdateringar kvarstår.
 
 ## 0.1.0-beta.2 – 2026-11-12
 

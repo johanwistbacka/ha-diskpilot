@@ -1,8 +1,8 @@
 # Installera Diskpilot
 
-Anvisningarna gäller **0.1.0-beta.2** och Home Assistant **2026.11 eller senare**. Diskpilot installeras som en integration. Dashboard-kortet följer med samma paket.
+Anvisningarna gäller **0.1.0-beta.3** och Home Assistant **2026.11 eller senare**. Diskpilot installeras som en integration. Dashboard-kortet följer med samma paket.
 
-[Tillbaka till README](../README.md) · [Hämta beta.2](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.2)
+[Tillbaka till README](../README.md) · [Hämta beta.3](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.3)
 
 ## Innan du börjar
 
@@ -19,7 +19,7 @@ Marketplace är inbyggd från Home Assistant 2026.11 och ersätter HACS. Stegen 
 1. Öppna **Inställningar → Marketplace** och välj **Add from link / Lägg till från länk**.
 2. Ange `https://github.com/johanwistbacka/ha-diskpilot` och välj **Lägg till**. Anslut GitHub om du blir ombedd. Välj typen **Integration** om Marketplace frågar.
 3. Öppna **Inställningar → Enheter och tjänster → Marketplace** och välj repots enhet. Aktivera den inaktiverade entiteten **Pre-release** och slå sedan på dess brytare.
-4. Återgå till repots sida i Marketplace och installera **0.1.0-beta.2**.
+4. Återgå till repots sida i Marketplace och installera **0.1.0-beta.3**.
 5. Starta om Home Assistant.
 
 **Pre-release har två steg:** att aktivera entiteten i dess inställningar och därefter slå på brytaren. En aktiverad men avstängd brytare visar fortfarande inte betaversioner.
@@ -59,7 +59,7 @@ title: Diskmaskinen
 Om du hanterar resurser i YAML behöver du själv lägga till denna post i din befintliga resurslista:
 
 ```yaml
-- url: /dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.2
+- url: /dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.3
   type: module
 ```
 
@@ -80,11 +80,13 @@ Diskpilot startar aldrig själva apparaten. Profilnamnet och att hela körningen
 ## Uppdatera från beta.1 eller en annan version
 
 1. Avsluta och granska pågående registrering. Ta en säkerhetskopia.
-2. Öppna Diskpilot i Marketplace. Kontrollera att **Pre-release** är på och välj uppdatering till **0.1.0-beta.2**.
+2. Öppna Diskpilot i Marketplace. Kontrollera att **Pre-release** är på och välj uppdatering till **0.1.0-beta.3**.
 3. Starta om Home Assistant och ladda om dashboarden.
 4. Kontrollera att dina profilnamn och antalet körningar finns kvar.
 
-Du behöver inte lägga till integrationen på nytt. Sparade profiler och körningar från beta.1 bevaras vid en normal uppdatering. Beta.2 kräver administratör för profil- och registreringsåtgärder.
+Du behöver inte lägga till integrationen på nytt. Sparade profiler och körningar från beta.1 och beta.2 bevaras vid en normal uppdatering. Från beta.2 krävs administratör för profil- och registreringsåtgärder.
+
+Från beta.3 kräver automatisk insamling normalt 30 sekunders aktivitet över startgränsen. Tiden ändras under **Konfigurera → Bekräfta aktivitet** (0–120 sekunder). 0 ger tidigare direktstart.
 
 För återställning och återgång, se [säkerhetskopia och återgång](../README.md#säkerhetskopia-och-återgång). Registreringsutkast stöds inte i beta.1.
 
@@ -92,7 +94,7 @@ För återställning och återgång, se [säkerhetskopia och återgång](../READ
 
 Använd detta alternativ om du installerar utan Marketplace:
 
-1. Hämta **Source code (zip)** från [beta.2-releasen](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.2) och packa upp arkivet.
+1. Hämta **Source code (zip)** från [beta.3-releasen](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.3) och packa upp arkivet.
 2. Kopiera hela mappen `custom_components/dishwasher_optimizer` till din Home Assistant-konfigurationsmapp, under `custom_components/`. Ta med mappen `www` och alla dess filer.
 3. Kontrollera att sökvägen är `custom_components/dishwasher_optimizer/manifest.json`, utan en extra `ha-diskpilot-…`-mapp mellan nivåerna. Konfigurationsmappen är den som innehåller `configuration.yaml`.
 4. Starta om Home Assistant och fortsätt med [att lägga till integrationen](#2-lägg-till-integrationen).
@@ -103,7 +105,7 @@ Vid manuell uppdatering ersätter du integrationsmappen med samma mapp från den
 
 | Symtom | Kontrollera |
 |---|---|
-| Beta.2 visas inte | Att entiteten **Pre-release** är aktiverad och brytaren på för rätt repo. |
+| Betaversionen visas inte | Att entiteten **Pre-release** är aktiverad och brytaren på för rätt repo. |
 | Diskpilot saknas under Lägg till integration | Att Home Assistant startats om och att `manifest.json` ligger på rätt nivå. |
 | Kortet saknas eller visar `Custom element doesn't exist: diskpilot-card` | Att integrationen är tillagd, att dashboarden laddats om och att resursen är registrerad som `module`. Kontrollera resurslistan om du hanterar den i YAML. |
 | Kostnaden visas som ett streck | Att profilen har en komplett körning och prissensorn har giltiga framtida intervall för hela programmet. Kontrollera prisformatet under Konfigurera. |
