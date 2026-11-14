@@ -2,7 +2,7 @@
 
 Diskpilot använder egna namngivna programprofiler för att beräkna billigaste start och elkostnad. Du ser alla program samtidigt. En effektsensor är valfri och behövs bara om du vill samla in nya körningar.
 
-**Beta 0.1.0-beta.5.** Kräver Home Assistant 2026.11 eller senare och är testad lokalt med 2026.11.1. Ingen automatisk start av maskinen. Du väljer profilnamnen själv. Tidigare installerade P2/P3/P4-profiler och deras underlag bevaras vid uppdatering. Ingen personlig mätdata eller förinställd förbrukning följer med koden. Installation i användarens produktionsmiljö är ännu inte verifierad.
+**Beta 0.1.0-beta.6.** Kräver Home Assistant 2026.11 eller senare och är testad lokalt med 2026.11.1. Ingen automatisk start av maskinen. Du väljer profilnamnen själv. Tidigare installerade P2/P3/P4-profiler och deras underlag bevaras vid uppdatering. Ingen personlig mätdata eller förinställd förbrukning följer med koden. Installation i användarens produktionsmiljö är ännu inte verifierad.
 
 ## Installation och uppdateringar
 
@@ -10,17 +10,21 @@ Diskpilot använder egna namngivna programprofiler för att beräkna billigaste 
 
 Snabbstart för Home Assistant 2026.11 eller senare:
 
-1. Installera **0.1.0-beta.5** via Marketplace med **Pre-release** aktiverat. De fullständiga stegen finns i guiden.
+1. Installera **0.1.0-beta.6** via Marketplace med **Pre-release** aktiverat. De fullständiga stegen finns i guiden.
 2. Lägg till **Diskpilot** under **Inställningar → Enheter och tjänster → Lägg till integration**. Sensorer och profilnamn är valfria vid start.
 3. Lägg till **Diskpilot** i dashboardens kortväljare och tillför egna profilkörningar genom filimport eller registrering.
 
 Guiden innehåller även manuell installation, uppdatering från beta.1 och felsökning. Profilhantering och registreringsåtgärder kräver administratörsbehörighet. Ta en säkerhetskopia före installation eller uppdatering.
 
-Den numrerade betan finns under [GitHub Releases](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.5) och är markerad som pre-release. Marketplace/HACS hämtar integrationsfilerna från den valda taggen; någon separat ZIP-asset krävs inte. Huvudgrenen används för fortsatt utveckling. Se [ändringsloggen](CHANGELOG.md).
+Den numrerade betan finns under [GitHub Releases](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.6) och är markerad som pre-release. Marketplace/HACS hämtar integrationsfilerna från den valda taggen; någon separat ZIP-asset krävs inte. Huvudgrenen används för fortsatt utveckling. Se [ändringsloggen](CHANGELOG.md).
+
+Beta.6 lägger till valbar Nord Pool-källa, Eltariff och redigerbart avtalspåslag. Se [priser och avtal](docs/pricing.md).
 
 ### Säkerhetskopia och återgång
 
 Ta en Home Assistant-säkerhetskopia före installation eller uppdatering, inklusive konfigurationens `.storage`, och spara återställningsnyckeln. Lokal historik och profiler ligger i `.storage`, utanför integrationskoden, och ersätts inte vid en normal koduppdatering.
+
+Beta.6 ändrar inte lagringsformatet. Före återgång till beta.5 väljer du **Färdig totalprislista** och återställer din tidigare prissensor/mappning. Beta.5 kan inte kombinera de nya priskällorna. Profiler och körningar bevaras.
 
 Återgång från beta.5 till beta.4 kräver ingen datamigrering. Kortets startval och graf finns bara i beta.5; profil-ID:n, körningar och inställningar har samma format. Starta om Home Assistant och ladda om webbläsaren efter kodbyte.
 
@@ -36,7 +40,9 @@ Om problem uppstår kan Diskpilot inaktiveras under Enheter och tjänster och Ho
 
 Under **Konfigurera** kan du lägga till, byta eller ta bort effektsensor utan att förlora sparade profiler. Saknar du en programprofil visas detta tydligt; koden gissar inte förbrukningen. Sparade uppmätta kurvor kan importeras med åtgärden nedan. Ingen fysisk mätare krävs för att använda dem.
 
-Under **Konfigurera** kan du byta prissensor och ange vilka attribut och fältnamn den använder. Ett aktuellt pris som ensamt sensorvärde räcker inte för optimering. Sensorn behöver innehålla framtida prisintervall, exempelvis:
+Från beta.6 väljer du priskälla i **Konfigurera → Nästa**: färdig totalprislista, Nord Pool-sensor (HACS) eller inbyggd Nord Pool. Nord Pool-lägena kan kombineras med Eltariff och eget avtalspåslag inklusive moms. [Inställningar, beräkning och begränsningar](docs/pricing.md).
+
+För **Färdig totalprislista** kan du byta prissensor och ange vilka attribut och fältnamn den använder. Ett aktuellt pris som ensamt sensorvärde räcker inte för optimering. Sensorn behöver innehålla framtida prisintervall, exempelvis:
 
 ```yaml
 prices:
@@ -50,10 +56,10 @@ Exemplet beskriver formatet och innehåller inga aktuella priser. Standard är a
 - Tidsstämplar måste innehålla tidszon/UTC-offset. Datetime-värden från integrationer stöds också.
 - Värden ska vara numeriska, ändliga och utan överlappande intervall. Negativa priser stöds.
 - Ange omräkning **1** för SEK/kWh, **0.01** för öre/kWh eller **0.001** för SEK/MWh.
-- Använd ditt rörliga avtalspris med de avgifter du vill räkna med. Diskpilot lägger inte till moms, skatt eller påslag själv.
+- Använd ditt rörliga avtalspris med de avgifter du vill räkna med. I läget **Färdig totalprislista** lägger Diskpilot inte till moms, skatt eller påslag själv.
 - Priser måste finnas för hela den beräknade körningen. Saknade eller felaktiga intervall ger ingen kostnad, aldrig antagna nollpriser.
 
-Din specifika avtalsprissensor behöver fortfarande kontrolleras mot detta format. Andra format kräver en adapter eller en separat sensors attribut med normaliserade intervall.
+Andra egna totalprisformat kräver normaliserade intervall. Nord Pool-lägena har egna adaptrar och behöver ingen separat hjälpsensor.
 
 ## Egna profiler och filimport
 
@@ -105,7 +111,7 @@ type: custom:diskpilot-card
 title: Diskmaskinen
 ```
 
-Har du flera maskiner väljer du vilken i kortets visuella inställningar. YAML-baserade dashboardresurser ändras inte automatiskt. Lägg i så fall till modulen `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.5` bland dina resurser.
+Har du flera maskiner väljer du vilken i kortets visuella inställningar. YAML-baserade dashboardresurser ändras inte automatiskt. Lägg i så fall till modulen `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.6` bland dina resurser.
 
 ## Åtgärder för export, import och märkning
 

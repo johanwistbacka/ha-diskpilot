@@ -10,27 +10,13 @@
           "power_entity": "Effektsensor (valfri)",
           "price_entity": "Prissensor (valfri)",
           "energy_entity": "Energisensor för apparaten (valfri, ackumulerad Wh/kWh)",
-          "profile_names": "Profilnamn (valfritt, ett namn per rad)"
+          "profile_names": "Profilnamn (valfritt, ett namn per rad)",
+          "price_source": "Priskälla"
         }
-      }
-    },
-    "error": {
-      "invalid_power": "Välj en effektsensor med enheten W eller kW.",
-      "invalid_price": "Prissensorn finns inte.",
-      "invalid_settings": "Kontrollera fälten. Startgränsen måste vara högre än vilogränsen och omräkningsfaktorn måste vara positiv.",
-      "power_in_use": "Effektsensorn används redan av en annan Diskpilot-instans.",
-      "invalid_energy": "Välj en energisensor i Wh eller kWh för samma apparat.",
-      "invalid_profiles": "Ange högst 50 olika profilnamn med 1–80 tecken, ett per rad."
-    },
-    "abort": {
-      "already_configured": "Effektsensorn används redan av Diskpilot."
-    }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "title": "Diskpilot",
-        "description": "Historiken sparas när du ändrar inställningarna. Detektionsgränser börjar gälla efter pågående körning.",
+      },
+      "prices": {
+        "title": "Priser och avtal",
+        "description": "Färdiga totalprislistor används som de är. Nord Pool kan kombineras med Eltariffs fasta energipriser (nätöverföring och energiskatt) inom deras giltighetsdatum. Tidsstyrda/dynamiska nätenergipriser stöds ännu inte. Påslaget gäller per kWh inklusive moms och kan vara negativt. Nord Pool-sensorn ska inte innehålla avgifter som läggs till här. Utan nätkälla visas endast spotpris och påslag.",
         "data": {
           "price_entity": "Prissensor (valfri)",
           "price_attributes": "Attribut med framtida prislistor (kommaseparerade)",
@@ -45,7 +31,14 @@
           "stop_minutes": "Bekräfta viloläge i (minuter)",
           "power_entity": "Effektsensor (valfri)",
           "energy_entity": "Energisensor för apparaten (valfri, ackumulerad Wh/kWh)",
-          "start_seconds": "Bekräfta aktivitet i (sekunder, 0 = direkt)"
+          "start_seconds": "Bekräfta aktivitet i (sekunder, 0 = direkt)",
+          "price_source": "Priskälla",
+          "nordpool_entry": "Nord Pool-integration",
+          "nordpool_area": "Elområde",
+          "grid_entry": "Eltariff-nätkälla (valfri)",
+          "contract_markup": "Avtalspåslag inkl. moms (valuta/kWh)",
+          "vat_percent": "Momssats på spotpris (%)",
+          "spot_includes_vat": "Nord Pool-sensorns priser innehåller redan moms"
         }
       }
     },
@@ -54,7 +47,85 @@
       "invalid_price": "Prissensorn finns inte.",
       "invalid_settings": "Kontrollera fälten. Startgränsen måste vara högre än vilogränsen och omräkningsfaktorn måste vara positiv.",
       "power_in_use": "Effektsensorn används redan av en annan Diskpilot-instans.",
-      "invalid_energy": "Välj en energisensor i Wh eller kWh för samma apparat."
+      "invalid_energy": "Välj en energisensor i Wh eller kWh för samma apparat.",
+      "invalid_profiles": "Ange högst 50 olika profilnamn med 1–80 tecken, ett per rad.",
+      "invalid_spot": "Välj en ren Nord Pool-prissensor i angiven valuta/kWh.",
+      "invalid_source": "Välj en befintlig integration av rätt typ.",
+      "invalid_area": "Elområdet måste vara konfigurerat i den valda Nord Pool-integrationen."
+    },
+    "abort": {
+      "already_configured": "Effektsensorn används redan av Diskpilot."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Diskpilot",
+        "description": "Välj priskälla och mätare. Historiken sparas. Nästa steg visar prisinställningarna. Detektionsgränser börjar gälla efter pågående körning.",
+        "data": {
+          "price_entity": "Prissensor (valfri)",
+          "price_attributes": "Attribut med framtida prislistor (kommaseparerade)",
+          "start_key": "Fält för prisintervallets start",
+          "end_key": "Fält för prisintervallets slut",
+          "value_key": "Fält för pris",
+          "price_multiplier": "Omräkning till valuta/kWh (1 för SEK/kWh, 0.01 för öre/kWh)",
+          "currency": "Valutakod",
+          "horizon_hours": "Åter i vila inom antal timmar",
+          "start_w": "Aktivitet börjar över (W)",
+          "stop_w": "Viloläge under (W)",
+          "stop_minutes": "Bekräfta viloläge i (minuter)",
+          "power_entity": "Effektsensor (valfri)",
+          "energy_entity": "Energisensor för apparaten (valfri, ackumulerad Wh/kWh)",
+          "start_seconds": "Bekräfta aktivitet i (sekunder, 0 = direkt)",
+          "price_source": "Priskälla"
+        }
+      },
+      "prices": {
+        "title": "Priser och avtal",
+        "description": "Färdiga totalprislistor används som de är. Nord Pool kan kombineras med Eltariffs fasta energipriser (nätöverföring och energiskatt) inom deras giltighetsdatum. Tidsstyrda/dynamiska nätenergipriser stöds ännu inte. Påslaget gäller per kWh inklusive moms och kan vara negativt. Nord Pool-sensorn ska inte innehålla avgifter som läggs till här. Utan nätkälla visas endast spotpris och påslag.",
+        "data": {
+          "price_entity": "Prissensor (valfri)",
+          "price_attributes": "Attribut med framtida prislistor (kommaseparerade)",
+          "start_key": "Fält för prisintervallets start",
+          "end_key": "Fält för prisintervallets slut",
+          "value_key": "Fält för pris",
+          "price_multiplier": "Omräkning till valuta/kWh (1 för SEK/kWh, 0.01 för öre/kWh)",
+          "currency": "Valutakod",
+          "horizon_hours": "Åter i vila inom antal timmar",
+          "start_w": "Aktivitet börjar över (W)",
+          "stop_w": "Viloläge under (W)",
+          "stop_minutes": "Bekräfta viloläge i (minuter)",
+          "power_entity": "Effektsensor (valfri)",
+          "energy_entity": "Energisensor för apparaten (valfri, ackumulerad Wh/kWh)",
+          "start_seconds": "Bekräfta aktivitet i (sekunder, 0 = direkt)",
+          "price_source": "Priskälla",
+          "nordpool_entry": "Nord Pool-integration",
+          "nordpool_area": "Elområde",
+          "grid_entry": "Eltariff-nätkälla (valfri)",
+          "contract_markup": "Avtalspåslag inkl. moms (valuta/kWh)",
+          "vat_percent": "Momssats på spotpris (%)",
+          "spot_includes_vat": "Nord Pool-sensorns priser innehåller redan moms"
+        }
+      }
+    },
+    "error": {
+      "invalid_power": "Välj en effektsensor med enheten W eller kW.",
+      "invalid_price": "Prissensorn finns inte.",
+      "invalid_settings": "Kontrollera fälten. Startgränsen måste vara högre än vilogränsen och omräkningsfaktorn måste vara positiv.",
+      "power_in_use": "Effektsensorn används redan av en annan Diskpilot-instans.",
+      "invalid_energy": "Välj en energisensor i Wh eller kWh för samma apparat.",
+      "invalid_spot": "Välj en ren Nord Pool-prissensor i angiven valuta/kWh.",
+      "invalid_source": "Välj en befintlig integration av rätt typ.",
+      "invalid_area": "Elområdet måste vara konfigurerat i den valda Nord Pool-integrationen."
+    }
+  },
+  "selector": {
+    "price_source": {
+      "options": {
+        "sensor": "Färdig totalprislista",
+        "nordpool_sensor": "Nord Pool-sensor (HACS)",
+        "nordpool_core": "Nord Pool (inbyggd i Home Assistant)"
+      }
     }
   }
 }

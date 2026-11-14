@@ -1,5 +1,15 @@
 # Ändringslogg
 
+## 0.1.0-beta.6 – 2026-11-14
+
+- Ny prisguide med val mellan befintlig totalprislista, HACS Nord Pool-sensor och Home Assistants inbyggda Nord Pool. Elnätskälla från Eltariff, avtalspåslag inklusive moms och momssats kan ändras utan att historik eller registrering avbryts.
+- Nord Pools servicepriser räknas från valuta/MWh till valuta/kWh. HACS-sensorns momsinställning är uttrycklig. Negativa spotpriser och negativa påslag stöds. Egna färdiga prislistor används oförändrade.
+- Eltariffs fasta nätenergipriser och energiskatt används bara inom publicerade giltighetsdatum. Fasta abonnemang, effekttariffer och deras `today_schedule` används inte. Tidsstyrda/dynamiska nätenergipriser stöds inte i denna första version; okänd data ger ett tydligt statusmeddelande.
+- Kortet visar beräkningsgrunden i programdetaljer. Ett avtalsbyte rensar tidigare kostnader och bästa-start-förslag medan nytt underlag hämtas; sena svar från föregående avtal avvisas i kortet. Saknade prisintervall fylls aldrig med nollor eller antagna framtidspriser.
+- 268 Python-tester och 26 JavaScript-tester. Nya syntetiska fall omfattar moms/enheter, energi och kostnad vid delminuter, giltighetsgränser, sommar-/vintertid, felaktiga nätpriser, cache, källbortfall, källbyte under hämtning och verkliga HA-inställningsflöden.
+- Lokalt prov med HA 2026.11.1, inbyggd Nord Pool och Eltariff 0.5.0: native formulär, sparande och sammansatt pris verifierade. HACS-delen kontrollerad med syntetiska prisattribut; ingen separat verklig HACS-provinstallation.
+- Ingen datamigrering, inget nytt Diskpilot-runtime-beroende och ingen licensändring. Välj åter färdig totalprislista före återgång till beta.5. Produktionsinstallation och användarens avtalspåslag är inte verifierade.
+
 ## 0.1.0-beta.5 – 2026-11-14
 
 - Kompakt programöversikt med kostnad vid vald start och billigaste start/kostnad samtidigt. Detaljer fälls ut per program. Profilhantering, registrering och senaste körningar samlas under **Profiler och körningar**.

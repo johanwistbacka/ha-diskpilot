@@ -10,27 +10,13 @@
           "power_entity": "Power sensor (optional)",
           "price_entity": "Price sensor (optional)",
           "energy_entity": "Appliance energy meter (optional, cumulative Wh/kWh)",
-          "profile_names": "Profile names (optional, one per line)"
+          "profile_names": "Profile names (optional, one per line)",
+          "price_source": "Price source"
         }
-      }
-    },
-    "error": {
-      "invalid_power": "Select a power sensor measured in W or kW.",
-      "invalid_price": "The price sensor does not exist.",
-      "invalid_settings": "Check the fields, threshold order, currency code and positive price multiplier.",
-      "power_in_use": "Another Diskpilot entry is already collecting from this power sensor.",
-      "invalid_energy": "Select a cumulative Wh or kWh energy sensor for the same appliance.",
-      "invalid_profiles": "Enter up to 50 distinct profile names, 1–80 characters each, one per line."
-    },
-    "abort": {
-      "already_configured": "This power sensor is already configured."
-    }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "title": "Diskpilot",
-        "description": "History is preserved. New detection thresholds apply after an active run.",
+      },
+      "prices": {
+        "title": "Prices and contract",
+        "description": "Complete price lists are used unchanged. Nord Pool can be combined with Eltariff fixed energy rates (transfer and energy tax) within their validity dates. Scheduled/dynamic grid energy rates are not yet supported. Markup is per kWh including VAT and may be negative. The Nord Pool sensor must not contain charges added here. Without a grid source, only spot price and markup are shown.",
         "data": {
           "price_entity": "Price sensor (optional)",
           "price_attributes": "Attributes containing future price lists (comma separated)",
@@ -45,7 +31,14 @@
           "stop_minutes": "Confirm standby for (minutes)",
           "power_entity": "Power sensor (optional)",
           "energy_entity": "Appliance energy meter (optional, cumulative Wh/kWh)",
-          "start_seconds": "Confirm activity for (seconds, 0 = immediate)"
+          "start_seconds": "Confirm activity for (seconds, 0 = immediate)",
+          "price_source": "Price source",
+          "nordpool_entry": "Nord Pool integration",
+          "nordpool_area": "Market area",
+          "grid_entry": "Eltariff grid source (optional)",
+          "contract_markup": "Contract markup including VAT (currency/kWh)",
+          "vat_percent": "Spot-price VAT rate (%)",
+          "spot_includes_vat": "Nord Pool sensor prices already include VAT"
         }
       }
     },
@@ -54,7 +47,85 @@
       "invalid_price": "The price sensor does not exist.",
       "invalid_settings": "Check the fields, threshold order, currency code and positive price multiplier.",
       "power_in_use": "Another Diskpilot entry is already collecting from this power sensor.",
-      "invalid_energy": "Select a cumulative Wh or kWh energy sensor for the same appliance."
+      "invalid_energy": "Select a cumulative Wh or kWh energy sensor for the same appliance.",
+      "invalid_profiles": "Enter up to 50 distinct profile names, 1–80 characters each, one per line.",
+      "invalid_spot": "Select a spot-price-only Nord Pool sensor in the chosen currency/kWh.",
+      "invalid_source": "Select an existing integration of the correct type.",
+      "invalid_area": "The area must be configured in the selected Nord Pool integration."
+    },
+    "abort": {
+      "already_configured": "This power sensor is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Diskpilot",
+        "description": "Choose a price source and meters. History is preserved. The next step shows price settings. Detection thresholds apply after an active run.",
+        "data": {
+          "price_entity": "Price sensor (optional)",
+          "price_attributes": "Attributes containing future price lists (comma separated)",
+          "start_key": "Price interval start field",
+          "end_key": "Price interval end field",
+          "value_key": "Price value field",
+          "price_multiplier": "Convert price to currency/kWh (1 for SEK/kWh, 0.01 for öre/kWh)",
+          "currency": "Currency code",
+          "horizon_hours": "Finish within this many hours",
+          "start_w": "Activity starts above (W)",
+          "stop_w": "Standby below (W)",
+          "stop_minutes": "Confirm standby for (minutes)",
+          "power_entity": "Power sensor (optional)",
+          "energy_entity": "Appliance energy meter (optional, cumulative Wh/kWh)",
+          "start_seconds": "Confirm activity for (seconds, 0 = immediate)",
+          "price_source": "Price source"
+        }
+      },
+      "prices": {
+        "title": "Prices and contract",
+        "description": "Complete price lists are used unchanged. Nord Pool can be combined with Eltariff fixed energy rates (transfer and energy tax) within their validity dates. Scheduled/dynamic grid energy rates are not yet supported. Markup is per kWh including VAT and may be negative. The Nord Pool sensor must not contain charges added here. Without a grid source, only spot price and markup are shown.",
+        "data": {
+          "price_entity": "Price sensor (optional)",
+          "price_attributes": "Attributes containing future price lists (comma separated)",
+          "start_key": "Price interval start field",
+          "end_key": "Price interval end field",
+          "value_key": "Price value field",
+          "price_multiplier": "Convert price to currency/kWh (1 for SEK/kWh, 0.01 for öre/kWh)",
+          "currency": "Currency code",
+          "horizon_hours": "Finish within this many hours",
+          "start_w": "Activity starts above (W)",
+          "stop_w": "Standby below (W)",
+          "stop_minutes": "Confirm standby for (minutes)",
+          "power_entity": "Power sensor (optional)",
+          "energy_entity": "Appliance energy meter (optional, cumulative Wh/kWh)",
+          "start_seconds": "Confirm activity for (seconds, 0 = immediate)",
+          "price_source": "Price source",
+          "nordpool_entry": "Nord Pool integration",
+          "nordpool_area": "Market area",
+          "grid_entry": "Eltariff grid source (optional)",
+          "contract_markup": "Contract markup including VAT (currency/kWh)",
+          "vat_percent": "Spot-price VAT rate (%)",
+          "spot_includes_vat": "Nord Pool sensor prices already include VAT"
+        }
+      }
+    },
+    "error": {
+      "invalid_power": "Select a power sensor measured in W or kW.",
+      "invalid_price": "The price sensor does not exist.",
+      "invalid_settings": "Check the fields, threshold order, currency code and positive price multiplier.",
+      "power_in_use": "Another Diskpilot entry is already collecting from this power sensor.",
+      "invalid_energy": "Select a cumulative Wh or kWh energy sensor for the same appliance.",
+      "invalid_spot": "Select a spot-price-only Nord Pool sensor in the chosen currency/kWh.",
+      "invalid_source": "Select an existing integration of the correct type.",
+      "invalid_area": "The area must be configured in the selected Nord Pool integration."
+    }
+  },
+  "selector": {
+    "price_source": {
+      "options": {
+        "sensor": "Complete price list",
+        "nordpool_sensor": "Nord Pool sensor (HACS)",
+        "nordpool_core": "Nord Pool (built into Home Assistant)"
+      }
     }
   }
 }

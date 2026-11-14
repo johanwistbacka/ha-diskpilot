@@ -21,6 +21,7 @@ from homeassistant.util import dt as dt_util
 from .const import DEFAULTS, DOMAIN, PROGRAMS
 from .engine import Collector, Run, finite
 from .planning import planning_view, prepare_plan
+from .price_sources import PriceSources
 from .profile_files import import_summary, parse_profile_file, profile_name
 from .registration import Registration, history_registration, power_value
 
@@ -43,6 +44,8 @@ class Runtime:
         self.results = {}
         self._planning = None
         self.plan_revision = 0
+        self.price_sources = PriceSources(hass)
+        self.price_basis = "Färdig totalprislista"
         self.price_status = "not_configured"
         self.source_status = "unknown"
         self.signal = f"{DOMAIN}_{entry.entry_id}"
@@ -91,8 +94,17 @@ class Runtime:
         if getattr(self, "_state_unsub", None):
             self._state_unsub()
         entities = [self.config["power_entity"]] if self.config["power_entity"] else []
-        if self.config["price_entity"]:
+        if self.config["price_entity"] and self.config["price_source"] != "nordpool_core":
             entities.append(self.config["price_entity"])
+        if self.config.get("grid_entry") and self.config["price_source"] != "sensor":
+            from homeassistant.helpers import entity_registry as er
+
+            registry = er.async_get(self.hass)
+            entities.extend(
+                e.entity_id
+                for e in er.async_entries_for_config_entry(registry, self.config["grid_entry"])
+                if e.unique_id.endswith("_energy_price_total")
+            )
         self._state_unsub = (
             async_track_state_change_event(self.hass, entities, self._state_changed)
             if entities
@@ -212,6 +224,12 @@ class Runtime:
         previous_power = self.config["power_entity"]
         previous_energy = self.config["energy_entity"]
         self.config = {**DEFAULTS, **entry.data, **entry.options}
+        # A new contract must not expose the last contract's costs during an awaited fetch.
+        self._planning = None
+        self.results = {}
+        self.price_status = "updating"
+        self.plan_revision += 1
+        async_dispatcher_send(self.hass, self.signal)
         if (
             self.config["energy_entity"] != previous_energy
             or self.config["power_entity"] != previous_power
@@ -250,14 +268,22 @@ class Runtime:
                 else None
             )
             now = dt_util.utcnow().timestamp()
-            plan = await self.hass.async_add_executor_job(
-                prepare_plan, runs, names, config, attributes, now
+            market = (
+                await self.price_sources.read(config, now)
+                if config["price_source"] != "sensor"
+                else None
             )
-            if self._closed:
+            if self._closed or config != self.config:
+                return
+            plan = await self.hass.async_add_executor_job(
+                prepare_plan, runs, names, config, attributes, now, market
+            )
+            if self._closed or config != self.config:
                 return
             self._planning = plan
             self.results = plan["results"]
             self.price_status = plan["price_status"]
+            self.price_basis = plan["price_basis"]
             self.plan_revision += 1
             async_dispatcher_send(self.hass, self.signal)
 
@@ -267,6 +293,8 @@ class Runtime:
         if self._planning is None:
             await self.async_refresh()
         self._require_open()
+        if self._planning is None:
+            raise ValueError("Prisunderlaget uppdateras. Försök igen.")
         now = dt_util.utcnow().timestamp()
         selected = now if started_at is None else finite(started_at)
         plan, revision = self._planning, self.plan_revision
