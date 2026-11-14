@@ -23,6 +23,10 @@ test('chart covers all known prices and selected profile; no coverage implied',(
  assert.deepEqual(chartDomain({now:100,selected_start:200,prices:[[0,9000,2]],profiles:[{selected_end:400}]}),{start:60,end:9000});
  assert.equal(chartDomain({now:100,selected_start:10000,prices:[[0,9000,2]],profiles:[{selected_end:11000}]}).end,11000);
 });
+test('run zoom follows selected start and the longest profile, including a partial minute',()=>{
+ assert.deepEqual(chartDomain({now:100,selected_start:2000,prices:[[0,90000,2]],profiles:[{duration_seconds:90},{duration_seconds:240.5}]},'run'),{start:2000,end:2240.5});
+ assert.deepEqual(chartDomain({now:100,selected_start:5000,prices:[],profiles:[{duration_seconds:null}]},'run'),{start:5000,end:8600});
+});
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 test('coalesces rapid selections, ignores stale success and preserves latest',async()=>{
