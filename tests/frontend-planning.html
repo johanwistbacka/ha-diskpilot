@@ -1,4 +1,5 @@
 <!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src data:; connect-src 'none'; worker-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
 <title>Diskpilot · syntetiskt interaktionstest</title>
 <style>
 body{font:14px system-ui;margin:16px;background:#f4f6f7;color:#222;--primary-text-color:#222;--secondary-text-color:#62686c;--primary-color:#087ea4;--card-background-color:#fff;--secondary-background-color:#eef1f3;--divider-color:#ddd;--success-color:#268246;--warning-color:#c18c00;--error-color:#cc3c32}
@@ -9,12 +10,14 @@ ha-card{display:block;background:#fff;border:1px solid #ddd;border-radius:12px}d
 <p id="requests" role="status"></p><diskpilot-card></diskpilot-card>
 <script type="module">
 import '../custom_components/dishwasher_optimizer/www/diskpilot-card.js';
+// Only the visual HA container is stubbed; the real Diskpilot modules render the card.
+customElements.define('ha-card',class extends HTMLElement{connectedCallback(){this.style.display='block';this.style.background='var(--card-background-color)';this.style.border='1px solid var(--divider-color)';this.style.borderRadius='12px';}});
 const now=Math.floor(Date.now()/60000)*60,entry='synthetic',card=document.querySelector('diskpilot-card');let revision=1,admin=true,delayed=false,fail=false,release=[],gap=false,flat=false,calls=0,currency="SEK",zone="Europe/Stockholm";
 const profiles=[['short','P3 · Snabb',75],['hot','P2 · 70 °C',150],['eco','P4 · Eco med ett avsiktligt mycket långt eget profilnamn',220]].map(([id,name,duration],index)=>({id,name,duration_seconds:duration*60,energy_wh:Array.from({length:duration},(_,i)=>i<15||i>duration-20?18:index===2?1.1:2.3),sample_count:index+1}));
 let hass={user:{is_admin:true},config:{time_zone:'Europe/Stockholm'},locale:{language:'sv-SE'},states:{},callWS:async({service,service_data})=>{
  if(service!=='get_plan')throw Error('Testet är skrivskyddat.');calls++;document.querySelector('#requests').textContent=`Anrop: ${calls} · start: ${service_data.started_at||'Nu'}`;
  const shouldFail=fail;fail=false;const start=service_data.started_at?Date.parse(service_data.started_at)/1000:Date.now()/1000;
- const data={entry_id:entry,revision,now:Date.now()/1000,selected_start:start,generated_at:now,planning_deadline:now+86400,currency,price_status:'ok',prices:Array.from({length:96},(_,i)=>[now+i*900,now+(i+1)*900,flat?-1:1+Math.sin(i/96*Math.PI*4)]).filter((_,i)=>!gap||i!==5),profiles:profiles.map((p,index)=>({...p,energy_kwh:p.energy_wh.reduce((a,b)=>a+b,0)/1000,selected_cost:start>now+86000?null:(start-now)/36000+index+.7,selected_end:start+p.duration_seconds,optimal_start:now+(index+1)*3600,cost:.5+index}))};
+ const data={entry_id:entry,revision,now:Date.now()/1000,selected_start:start,generated_at:now,planning_deadline:now+86400,currency,price_status:'ok',price_basis:'Syntetiskt prisunderlag: Nord Pool + Eltariff + avtalspåslag inklusive moms. Inga verkliga avtalspriser.',prices:Array.from({length:96},(_,i)=>[now+i*900,now+(i+1)*900,flat?-1:1+Math.sin(i/96*Math.PI*4)]).filter((_,i)=>!gap||i!==5),profiles:profiles.map((p,index)=>({...p,energy_kwh:p.energy_wh.reduce((a,b)=>a+b,0)/1000,selected_cost:start>now+86000?null:(start-now)/36000+index+.7,selected_end:start+p.duration_seconds,optimal_start:now+(index+1)*3600,cost:.5+index}))};
  if(delayed){delayed=false;await new Promise(resolve=>release.push(resolve));}if(shouldFail)throw Error('Syntetiskt anslutningsfel');return{response:data};
 }};
 function refresh(){hass={...hass,user:{is_admin:admin},config:{time_zone:zone},states:{'sensor.synthetic':{entity_id:'sensor.synthetic',state:'planner',attributes:{diskpilot_entry_id:entry,plan_revision:revision++,profiles:profiles.map(({id,name})=>({id,name})),recent_runs:[]}},...Object.fromEntries(profiles.map(p=>['sensor.'+p.id,{state:String(.5),attributes:{program:p.id,diskpilot_entry_id:entry,currency,energy_kwh:.5,sample_count:p.sample_count,duration_minutes:p.duration_seconds/60,optimal_start:new Date((now+3600)*1000).toISOString()}}]))}};card.hass=hass;}

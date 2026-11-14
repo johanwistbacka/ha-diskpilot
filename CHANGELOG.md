@@ -1,5 +1,13 @@
 # Ändringslogg
 
+## Under utveckling
+
+- Kortet skiljer lokal validering av starttid från anslutningsfel. Tom/ogiltig tid visar hur den rättas; Försök igen används bara för hämtningsfel. Nu återställer startvalet.
+- Grafen har valen **Alla priser** och **Körningen**. Körningsvyn följer vald start och den längsta sparade profilen. Priskurvans färger är fortsatt relativa till hela den tillgängliga prisperioden; luckor fylls inte.
+- Klick eller tangentbordsaktivering på **Billigast** väljer programmets föreslagna start för jämförelse. Det fäller inte ut programraden och skickar bara den skrivskyddade planeringsbegäran.
+- **Vid vald start** och **Billigast** förtydligar kostnaderna, som visas med två decimaler. Gemensam prisgrund och planeringshorisont samlas under **Prisunderlag**. Programdetaljer behåller energi, tid, underlag och skillnad i kostnad.
+- Inga nya inställningar, lagringsändringar eller beroenden. Zoom och startval gäller bara det aktuella kortet. Den installerade beta.6 ändras inte av utvecklingsgrenen.
+
 ## 0.1.0-beta.6 – 2026-11-14
 
 - Ny prisguide med val mellan befintlig totalprislista, HACS Nord Pool-sensor och Home Assistants inbyggda Nord Pool. Elnätskälla från Eltariff, avtalspåslag inklusive moms och momssats kan ändras utan att historik eller registrering avbryts.

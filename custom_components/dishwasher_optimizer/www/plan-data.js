@@ -19,7 +19,12 @@ export function powerSegments(profile, start) {
     return {start:start+a,end:start+b,watts:wh*3600/(b-a)};
   }).filter(p=>p.end>p.start&&Number.isFinite(p.watts)&&p.watts>=0);
 }
-export function chartDomain(view) {
+export function chartDomain(view, mode='all') {
+  if(mode==='run'){
+    let duration=0;
+    for(const p of view.profiles)if(Number.isFinite(p.duration_seconds)&&p.duration_seconds>0)duration=Math.max(duration,p.duration_seconds);
+    return {start:view.selected_start,end:view.selected_start+(duration||3600)};
+  }
   const start=Math.floor(Math.min(view.now,view.selected_start)/60)*60;
   let end=start+3600;
   for(const p of view.prices)end=Math.max(end,p[1]);
