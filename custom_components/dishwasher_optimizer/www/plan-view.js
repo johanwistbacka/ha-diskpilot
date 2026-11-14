@@ -5,7 +5,7 @@ let instance=0;
 const palette=['#039be5','#a66dd4','#008f83','#cf791d','#d96a9a','#8c8176'];
 const ns='http://www.w3.org/2000/svg';
 const svgNode=(tag,attrs={},text)=>{const n=document.createElementNS(ns,tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);if(text!==undefined)n.textContent=text;return n;};
-const statuses={not_configured:'Välj en prissensor i integrationens inställningar.',unavailable:'Prissensorn är inte tillgänglig.',no_intervals:'Prissensorn saknar prisintervall.',invalid_format:'Kontrollera prissensorns format i inställningarna.'};
+const statuses={updating:'Prisunderlaget uppdateras.',not_configured:'Välj en prissensor i integrationens inställningar.',unavailable:'Prissensorn är inte tillgänglig.',no_intervals:'Prissensorn saknar prisintervall.',invalid_format:'Kontrollera prissensorns format i inställningarna.',grid_unavailable:'Eltariff-källan är inte tillgänglig.',grid_unsupported:'Eltariff: nätenergitariffen stöds inte eller saknar säker giltighet. Tidsstyrda/dynamiska nätpriser stöds ännu inte.',grid_no_coverage:'Nätavgift eller energiskatt saknas för prisperioden.',currency_mismatch:'Priskällornas valuta eller enhet stämmer inte överens.',spot_includes_fees:'Nord Pool-sensorn har redan avgiftspåslag. Använd en ren spotpriskälla eller en färdig totalprislista.'};
 const css=`
 .plan-view{--plan-low:var(--success-color,#36884d);--plan-mid:var(--warning-color,#c69900);--plan-high:var(--error-color,#d7473e);color:var(--primary-text-color);min-width:0;container-type:inline-size}
 .plan-view [hidden]{display:none!important}
@@ -29,6 +29,10 @@ export function renderPlanning(card,entryId,profiles,status,el,number,zonedTimes
     this._planEntry=entryId;this._planState={id:++instance,entryId,followNow:true,fixed:null,editing:false,waiting:false,error:'',data:null,rows:new Map(),hidden:new Set(),nodes:null,queue:null,geometry:null,revision:null};
   }
   const f=this._planState;f.hass=this._hass;f.status=status;f.profiles=profiles;
+  if(status.price_status==='updating'&&f.invalidatedRevision!==status.plan_revision){
+    f.invalidatedRevision=status.plan_revision;f.queue?.invalidate();f.data=null;f.geometry=null;
+    f.nodes?.chart.replaceChildren();f.nodes?.legend.replaceChildren();f.nodes?.scale.replaceChildren();
+  }
   if(!f.hass.user?.is_admin){f.queue?.dispose();f.queue=null;f.data=null;f.waiting=false;f.geometry=null;f.nodes?.chart.replaceChildren();f.nodes?.legend.replaceChildren();f.nodes?.scale.replaceChildren();}
   const valid=()=>this._planState===f&&!f.closed;
   const zone=()=>f.hass.config?.time_zone||'Europe/Stockholm';
@@ -72,33 +76,34 @@ export function renderPlanning(card,entryId,profiles,status,el,number,zonedTimes
     const changedZone=f.inputZone!==zone();f.inputZone=zone();
     if(changedZone&&f.editing){f.editing=false;f.error='';n.input.setCustomValidity('');}
     if(!f.editing&&(changedZone||n.node.getRootNode().activeElement!==n.input))n.input.value=localInput(f.followNow?f.data?.selected_start||Date.now()/1000:Date.parse(f.fixed)/1000,zone());
-    const data=f.data;f.currency=data?.currency||nativeProfiles()[0]?.currency||'SEK';const prices=data?.prices||[];let lastPrice=null;for(const p of prices)lastPrice=Math.max(lastPrice??p[1],p[1]);
-    n.info.textContent=!admin?'Billigaste kostnad och start · enligt programsensorerna':data?`${lastPrice?'Priser till '+format(lastPrice):statuses[data.price_status]||'Framtida priser saknas.'} · ${f.followNow?'Följer Nu':'Vald start'} · ${data.currency}/kWh`:'Planering med sparade profiler';
+    const updating=f.status.price_status==='updating';const data=updating?null:f.data;f.currency=data?.currency||nativeProfiles()[0]?.currency||'SEK';const prices=data?.prices||[];let lastPrice=null;for(const p of prices)lastPrice=Math.max(lastPrice??p[1],p[1]);
+    n.info.textContent=!admin?'Billigaste kostnad och start · enligt programsensorerna':data?`${lastPrice?'Priser till '+format(lastPrice):statuses[data.price_status]||'Framtida priser saknas.'} · ${f.followNow?'Följer Nu':'Vald start'} · ${data.currency}/kWh`:updating?statuses.updating:'Planering med sparade profiler';
     const source=data?.profiles||nativeProfiles();const ids=new Set(source.map(p=>p.id));
     for(const[id,row]of f.rows)if(!ids.has(id)){row.section.remove();f.rows.delete(id);}
     source.forEach((p,index)=>{
       let row=f.rows.get(p.id);
       if(!row){const section=el('details',undefined,'plan-row'),summary=el('summary');summary.dataset.focusKey=`plan-${entryId}-${p.id}`;const name=el('span','', 'plan-name'),value=el('span','', 'plan-cost'),best=el('span','', 'plan-best'),bestTime=el('span'),bestPrice=el('span','', 'plan-best-price'),body=el('div',undefined,'plan-body');best.append(bestTime,bestPrice);summary.append(name,value,best);section.append(summary,body);row={section,summary,name,value,bestTime,bestPrice,body};f.rows.set(p.id,row);}
       if(row.section.parentNode!==n.rows)n.rows.append(row.section);
-      row.name.textContent=p.name;row.name.title=p.name;const value=admin?(!f.waiting&&!f.editing&&!f.error?p.selected_cost:null):p.cost;
-      row.value.textContent=amount(value);row.bestTime.textContent=format(p.optimal_start,true);row.bestPrice.textContent=Number.isFinite(p.cost)?amount(p.cost):'';
-      row.summary.setAttribute('aria-label',`${p.name}, ${admin?'kostnad vid vald start':'billigaste kostnad'} ${amount(value)}, billigast ${format(p.optimal_start)}, ${amount(p.cost)}`);
+      row.name.textContent=p.name;row.name.title=p.name;const cost=updating?null:p.cost,optimalStart=updating?null:p.optimal_start;const value=updating?null:admin?(!f.waiting&&!f.editing&&!f.error?p.selected_cost:null):cost;
+      row.value.textContent=amount(value);row.bestTime.textContent=format(optimalStart,true);row.bestPrice.textContent=Number.isFinite(cost)?amount(cost):'';
+      row.summary.setAttribute('aria-label',`${p.name}, ${admin?'kostnad vid vald start':'billigaste kostnad'} ${amount(value)}, billigast ${format(optimalStart)}, ${amount(cost)}`);
       row.body.replaceChildren(el('span',p.name),el('span',`Energi: ${p.energy_kwh==null?'—':number(p.energy_kwh,3)+' kWh'}`),el('span',`Tid: ${p.duration_seconds==null?'—':number(p.duration_seconds/60,1)+' min'}`),el('span',`Underlag: ${p.sample_count||0} märkta körningar`),el('span',`Åter i vila vid vald start: ${format(f.waiting||f.editing||f.error?null:p.selected_end)}`),el('span',`Billigast före: ${format(data?.planning_deadline)}`));
-      if(Number.isFinite(value)&&Number.isFinite(p.cost))row.body.append(el('span',`Skillnad mot billigaste start: ${amount(value-p.cost)}`));
+      if(Number.isFinite(value)&&Number.isFinite(cost))row.body.append(el('span',`Skillnad mot billigaste start: ${amount(value-cost)}`));
       if(!p.sample_count)row.body.append(el('p','Behöver en komplett märkt körning.'));
       else if(p.sample_count===1)row.body.append(el('p','Första uppskattningen · baserad på en körning.'));
+      if(data?.price_basis)row.body.append(el('p',data.price_basis));
       row.body.append(el('p','Beräknat från sparade minutprofiler. Åter i vila är inte verifierad färdigtid.'));
       row.color=palette[index%palette.length];row.dash=['','5 3','2 3','8 3','5 2 1 2','1 2'][index%6];
     });
-    n.retry.hidden=!f.error||!admin;n.message.textContent=!admin?'Graf och valbar start kräver administratör, eftersom profilkurvorna är skyddade.':f.error?`Kunde inte hämta planeringen: ${f.error}`:f.editing?'Välj och bekräfta starttiden.':f.waiting?'Beräknar vald start…':data&&source.some(p=>p.sample_count&&p.selected_cost===null)?'Priser saknas för en hel körning vid vald start.':data&&data.price_status!=='ok'?statuses[data.price_status]||'Framtida priser saknas.':'';
-    n.chart.hidden=Boolean(f.waiting||f.editing||f.error);n.legend.hidden=n.chart.hidden;n.scale.hidden=n.chart.hidden;
+    n.retry.hidden=!f.error||!admin;n.message.textContent=!admin?'Graf och valbar start kräver administratör, eftersom profilkurvorna är skyddade.':updating?statuses.updating:f.error?`Kunde inte hämta planeringen: ${f.error}`:f.editing?'Välj och bekräfta starttiden.':f.waiting?'Beräknar vald start…':data&&data.price_status!=='ok'?statuses[data.price_status]||'Framtida priser saknas.':data&&source.some(p=>p.sample_count&&p.selected_cost===null)?'Priser saknas för en hel körning vid vald start.':'';
+    n.chart.hidden=Boolean(updating||f.waiting||f.editing||f.error);n.legend.hidden=n.chart.hidden;n.scale.hidden=n.chart.hidden;
     n.graph.setAttribute('aria-busy',String(f.waiting));
     drawPlot();
   }
   function statusState(){return thisCard._hass.states&&Object.values(thisCard._hass.states).find(s=>s.attributes.diskpilot_entry_id===entryId&&'recent_runs'in s.attributes)?.state;}
   function nativeProfiles(){const entities=Object.values(f.hass.states).filter(s=>s.attributes.diskpilot_entry_id===entryId&&s.attributes.program);return f.profiles.map(p=>{const a=entities.find(s=>s.attributes.program===p.id)?.attributes||{};return {id:p.id,name:p.name,...a,cost:Number.isFinite(Number(entities.find(s=>s.attributes.program===p.id)?.state))?Number(entities.find(s=>s.attributes.program===p.id)?.state):null,duration_seconds:a.duration_minutes*60,optimal_start:a.optimal_start?Date.parse(a.optimal_start)/1000:null,optimal_end:a.optimal_end?Date.parse(a.optimal_end)/1000:null};});}
   function drawPlot(){
-    if(!valid()||!n.graph.open||!f.data||!f.hass.user?.is_admin)return;
+    if(!valid()||f.status.price_status==='updating'||!n.graph.open||!f.data||!f.hass.user?.is_admin)return;
     const view=f.data,width=Math.floor(n.chart.clientWidth);if(width<160)return;
     const domain=chartDomain(view),range=priceRange(view.prices),height=width<440?190:220;
     const key=JSON.stringify([width,domain,view.currency,zone(),view.prices,view.profiles.map(p=>[p.id,p.name,p.duration_seconds,p.energy_wh])]);

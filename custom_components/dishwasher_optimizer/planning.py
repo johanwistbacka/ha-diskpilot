@@ -1,21 +1,13 @@
 """Immutable calculation snapshots and read-only chart views; run on HA's executor."""
 
-from .engine import cost_at, optimise, parse_prices, profile_for
+from .engine import cost_at, optimise, profile_for
+from .pricing import source_prices
 
 
-def prepare_plan(runs, names, config, attributes, now):
+def prepare_plan(runs, names, config, attributes, now, market=None):
     """Keep price mapping, average curves and optimal costs from one source snapshot."""
     profiles = {key: profile_for(runs, key) for key in names}
-    prices = []
-    price_status = "not_configured"
-    if config["price_entity"]:
-        price_status = "unavailable"
-        if attributes is not None:
-            try:
-                prices = parse_prices(attributes, config)
-                price_status = "ok" if prices else "no_intervals"
-            except ValueError, TypeError, KeyError, OverflowError:
-                price_status = "invalid_format"
+    prices, price_status, price_basis = source_prices(config, attributes, now, market)
     deadline = now + config["horizon_hours"] * 3600
     results = {}
     for key, profile in profiles.items():
@@ -44,6 +36,7 @@ def prepare_plan(runs, names, config, attributes, now):
         "results": results,
         "price_status": price_status,
         "currency": config["currency"],
+        "price_basis": price_basis,
         "generated_at": now,
         "deadline": deadline,
     }
@@ -73,6 +66,7 @@ def planning_view(plan, now, selected_start):
         "planning_deadline": plan["deadline"],
         "currency": plan["currency"],
         "price_status": plan["price_status"],
+        "price_basis": plan["price_basis"],
         "prices": [
             [p.start, p.end, p.value] for p in plan["prices"] if p.end > min(now, selected_start)
         ],

@@ -123,3 +123,7 @@ Efter uppdatering och omstart visas **Beräknad start**, kostnad per program och
 Graf och manuellt startval kräver administratör. Övriga användare ser billigaste kostnad och start. **Profiler och körningar** öppnar befintlig filimport, registrering och senaste körningar. Klicka på en programrad för hela namnet, energi och övriga detaljer.
 
 Lagringsformatet ändras inte. Återgång till beta.4 kräver kodbyte, omstart och omladdning av webbläsaren, utan datamigrering. För YAML-resurser i beta.5: använd `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.5`. Automatiskt hanterade resurser får även en innehållsbaserad cacheversion för alla kortets moduler.
+
+## Priser och avtal i kommande beta.6
+
+Beta.6 är ännu inte publicerad. Den lägger till **Konfigurera → Priskälla → Nästa → Priser och avtal** med Nord Pool, valfri Eltariff-nätkälla och avtalspåslag. Befintliga installationer behåller sin totalprislista tills du ändrar valet. Se [prisguiden](pricing.md) för inställningar, begränsningar och återgång.
