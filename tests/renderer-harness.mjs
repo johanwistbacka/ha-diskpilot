@@ -23,4 +23,3 @@ export class Node {
 export const el=(tag,text='')=>{const n=new Node(tag);n.textContent=text;return n;};
 export const tick=()=>new Promise(resolve=>setImmediate(resolve));
 export const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{promise,resolve};};
-
