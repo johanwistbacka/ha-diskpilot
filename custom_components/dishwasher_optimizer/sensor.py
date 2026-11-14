@@ -75,6 +75,7 @@ class StatusSensor(BaseSensor):
             "recent_runs": self.runtime.summaries(),
             "profiles": [{"id": key, "name": name} for key, name in self.runtime.profiles.items()],
             "version": VERSION,
+            "plan_revision": self.runtime.plan_revision,
             "power_entity": self.runtime.config["power_entity"],
             "registration": self.runtime.registration_summary(),
             "start_pending": self.runtime.collector.candidate is not None,

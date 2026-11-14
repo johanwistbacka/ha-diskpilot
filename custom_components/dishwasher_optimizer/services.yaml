@@ -1,3 +1,17 @@
+get_plan:
+  name: Compare program starts
+  description: Return normalized future prices, average minute profiles and costs at a card-local start. Admin only; no data is saved.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    started_at:
+      description: Optional ISO timestamp with UTC offset. Omit to compare starting now.
+      example: '2026-11-14T23:00:00+01:00'
+      selector:
+        text:
+
 get_runs:
   name: Export runs
   description: Return stored runs with minute energy in Wh for analysis and backup.

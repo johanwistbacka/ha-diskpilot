@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import replace
 from datetime import timedelta
 from uuid import uuid4
 
@@ -18,7 +19,8 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import DEFAULTS, DOMAIN, PROGRAMS
-from .engine import Collector, Run, finite, optimise, parse_prices, profile_for
+from .engine import Collector, Run, finite
+from .planning import planning_view, prepare_plan
 from .profile_files import import_summary, parse_profile_file, profile_name
 from .registration import Registration, history_registration, power_value
 
@@ -39,6 +41,8 @@ class Runtime:
         )
         self.collector = Collector()
         self.results = {}
+        self._planning = None
+        self.plan_revision = 0
         self.price_status = "not_configured"
         self.source_status = "unknown"
         self.signal = f"{DOMAIN}_{entry.entry_id}"
@@ -233,55 +237,42 @@ class Runtime:
         async with self._lock:
             if self._closed:
                 return
-            profiles = {program: profile_for(self.runs, program) for program in self.profiles}
-            prices = []
-            self.price_status = "not_configured"
-            if self.config["price_entity"]:
-                self.price_status = "unavailable"
-                state = self.hass.states.get(self.config["price_entity"])
-                if state is not None and state.state not in ("unknown", "unavailable"):
-                    try:
-                        prices = parse_prices(state.attributes, self.config)
-                        self.price_status = "ok" if prices else "no_intervals"
-                    except ValueError, TypeError, KeyError, OverflowError:
-                        self.price_status = "invalid_format"
+            config = dict(self.config)
+            names = dict(self.profiles)
+            runs = [
+                replace(run, energy_wh=list(run.energy_wh), issues=list(run.issues))
+                for run in self.runs
+            ]
+            state = self.hass.states.get(config["price_entity"]) if config["price_entity"] else None
+            attributes = (
+                dict(state.attributes)
+                if state is not None and state.state not in ("unknown", "unavailable")
+                else None
+            )
             now = dt_util.utcnow().timestamp()
-            deadline = now + self.config["horizon_hours"] * 3600
+            plan = await self.hass.async_add_executor_job(
+                prepare_plan, runs, names, config, attributes, now
+            )
+            if self._closed:
+                return
+            self._planning = plan
+            self.results = plan["results"]
+            self.price_status = plan["price_status"]
+            self.plan_revision += 1
+            async_dispatcher_send(self.hass, self.signal)
 
-            def calculate():
-                return {
-                    program: optimise(profile, now, deadline, prices)
-                    for program, profile in profiles.items()
-                    if profile is not None and prices
-                }
-
-            calculated = await self.hass.async_add_executor_job(calculate)
-            self.results = {}
-            for program, profile in profiles.items():
-                result = calculated.get(program, {})
-                self.results[program] = {
-                    **result,
-                    "sample_count": profile.count if profile else 0,
-                    "energy_kwh": sum(profile.energy_wh) / 1000 if profile else None,
-                    "duration_minutes": profile.duration_seconds / 60 if profile else None,
-                    "energy_min_kwh": profile.min_kwh if profile else None,
-                    "energy_max_kwh": profile.max_kwh if profile else None,
-                    "status": (
-                        (
-                            "needs_labelled_run"
-                            if self.config["power_entity"]
-                            else "needs_saved_profile"
-                        )
-                        if profile is None
-                        else self.price_status
-                        if self.price_status != "ok"
-                        else "ok"
-                        if result.get("cost") is not None
-                        else "insufficient_price_coverage"
-                    ),
-                }
-            if not self._closed:
-                async_dispatcher_send(self.hass, self.signal)
+    async def async_get_plan(self, started_at=None):
+        """A card-local comparison never changes options, stored runs or scheduling."""
+        self._require_open()
+        if self._planning is None:
+            await self.async_refresh()
+        self._require_open()
+        now = dt_util.utcnow().timestamp()
+        selected = now if started_at is None else finite(started_at)
+        plan, revision = self._planning, self.plan_revision
+        view = await self.hass.async_add_executor_job(planning_view, plan, now, selected)
+        self._require_open()
+        return {"entry_id": self.entry.entry_id, "revision": revision, **view}
 
     def summaries(self):
         return [

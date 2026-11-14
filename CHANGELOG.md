@@ -1,5 +1,20 @@
 # Ändringslogg
 
+## 0.1.0-beta.5 – 2026-11-14
+
+- Kompakt programöversikt med kostnad vid vald start och billigaste start/kostnad samtidigt. Detaljer fälls ut per program. Profilhantering, registrering och senaste körningar samlas under **Profiler och körningar**.
+- Valbar start med **Nu** som standard. Valet gäller bara kortet, använder HA:s tidszon och påverkar inte inställningar, programsensorer, sparade körningar eller apparaten. Ogiltiga och tvetydiga lokala tider avvisas.
+- Gemensam graf för hela den tillgängliga framtida prisperioden och profilernas beräknade effekt i W. Priskurvan går från grönt via gult till rött relativt prognosens lägsta/högsta pris. Negativa och oförändrade priser samt luckor hanteras uttryckligen.
+- Skrivskyddad administratörsåtgärd `get_plan` hämtar medelkurvor och valda kostnader utan stora Recorder-attribut. Beräkningar körs utanför eventloopen och återanvänder den befintliga prismotorn.
+- Sena svar för äldre startval ignoreras; fel ger möjlighet att försöka igen. Kortets bredd styr layouten, och grafens värden kan läsas med tangentbord.
+
+### Verifiering och begränsningar
+
+- 238 Python-tester och 25 JavaScript-tester, inklusive syntetiska pris-/energikontroller, partiell minut, negativa priser, luckor, läsning efter avstängning, samtidiga svar och befintliga registrerings-/importflöden. Syntetisk webbläsar-fixture finns i `tests/frontend-planning.html`.
+- Graf och valbar start kräver administratör; andra användare behåller billigaste kostnad och start från programsensorerna. Standard **Nu** uppdateras när planeringsunderlaget räknas om, normalt varje minut; detta är ingen sekundklocka.
+- Ingen datamigrering, inget nytt runtime-beroende och ingen ändrad licens. Återgång till beta.4 kräver ingen dataändring. Omstart av HA och omladdning av webbläsaren krävs vid kodbyte.
+- Uppskattad återgång till vila är fortsatt inte verifierad färdig disk. Produktionsinstallation och fysisk mätnoggrannhet är inte verifierade.
+
 ## 0.1.0-beta.4 – 2026-11-13
 
 Korrigerar tre reproducerade fel i beta.3. Kräver fortsatt Home Assistant 2026.11 eller senare. Säkerhetskopiera konfigurationen inklusive `.storage` före uppdatering.

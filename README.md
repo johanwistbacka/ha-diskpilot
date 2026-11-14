@@ -2,7 +2,7 @@
 
 Diskpilot använder egna namngivna programprofiler för att beräkna billigaste start och elkostnad. Du ser alla program samtidigt. En effektsensor är valfri och behövs bara om du vill samla in nya körningar.
 
-**Beta 0.1.0-beta.4.** Kräver Home Assistant 2026.11 eller senare och är testad lokalt med 2026.11.1. Ingen automatisk start av maskinen. Du väljer profilnamnen själv. Tidigare installerade P2/P3/P4-profiler och deras underlag bevaras vid uppdatering. Ingen personlig mätdata eller förinställd förbrukning följer med koden. Installation i användarens produktionsmiljö är ännu inte verifierad.
+**Beta 0.1.0-beta.5.** Kräver Home Assistant 2026.11 eller senare och är testad lokalt med 2026.11.1. Ingen automatisk start av maskinen. Du väljer profilnamnen själv. Tidigare installerade P2/P3/P4-profiler och deras underlag bevaras vid uppdatering. Ingen personlig mätdata eller förinställd förbrukning följer med koden. Installation i användarens produktionsmiljö är ännu inte verifierad.
 
 ## Installation och uppdateringar
 
@@ -10,17 +10,19 @@ Diskpilot använder egna namngivna programprofiler för att beräkna billigaste 
 
 Snabbstart för Home Assistant 2026.11 eller senare:
 
-1. Installera **0.1.0-beta.4** via Marketplace med **Pre-release** aktiverat. De fullständiga stegen finns i guiden.
+1. Installera **0.1.0-beta.5** via Marketplace med **Pre-release** aktiverat. De fullständiga stegen finns i guiden.
 2. Lägg till **Diskpilot** under **Inställningar → Enheter och tjänster → Lägg till integration**. Sensorer och profilnamn är valfria vid start.
 3. Lägg till **Diskpilot** i dashboardens kortväljare och tillför egna profilkörningar genom filimport eller registrering.
 
 Guiden innehåller även manuell installation, uppdatering från beta.1 och felsökning. Profilhantering och registreringsåtgärder kräver administratörsbehörighet. Ta en säkerhetskopia före installation eller uppdatering.
 
-Den numrerade betan finns under [GitHub Releases](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.4) och är markerad som pre-release. Marketplace/HACS hämtar integrationsfilerna från den valda taggen; någon separat ZIP-asset krävs inte. Huvudgrenen används för fortsatt utveckling. Se [ändringsloggen](CHANGELOG.md).
+Den numrerade betan finns under [GitHub Releases](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.5) och är markerad som pre-release. Marketplace/HACS hämtar integrationsfilerna från den valda taggen; någon separat ZIP-asset krävs inte. Huvudgrenen används för fortsatt utveckling. Se [ändringsloggen](CHANGELOG.md).
 
 ### Säkerhetskopia och återgång
 
 Ta en Home Assistant-säkerhetskopia före installation eller uppdatering, inklusive konfigurationens `.storage`, och spara återställningsnyckeln. Lokal historik och profiler ligger i `.storage`, utanför integrationskoden, och ersätts inte vid en normal koduppdatering.
+
+Återgång från beta.5 till beta.4 kräver ingen datamigrering. Kortets startval och graf finns bara i beta.5; profil-ID:n, körningar och inställningar har samma format. Starta om Home Assistant och ladda om webbläsaren efter kodbyte.
 
 Återgång från beta.4 till beta.3 kräver ingen datamigrering men återinför de rättade felen. Uppdateringen återskapar inte tidigare saknad mätdata eller överskrivna profiler; granska misstänkta underlag och använd säkerhetskopia vid behov.
 
@@ -55,7 +57,7 @@ Din specifika avtalsprissensor behöver fortfarande kontrolleras mot detta forma
 
 ## Egna profiler och filimport
 
-Öppna **Profiler och filimport** i kortet för att skapa och namnge profiler, byta namn eller ladda upp egna CSV/JSON-filer. Filen kontrolleras först och du får se antal körningar, energi, längd och den första körningens kurva. Välj profil och bekräfta märkningen innan något importeras.
+Öppna **Profiler och körningar → Profiler och filimport** i kortet för att skapa och namnge profiler, byta namn eller ladda upp egna CSV/JSON-filer. Filen kontrolleras först och du får se antal körningar, energi, längd och den första körningens kurva. Välj profil och bekräfta märkningen innan något importeras.
 
 **Ingen AI-koppling krävs.** Importen och kostnadsberäkningen sker i Home Assistant. En rå historikexport behöver först omvandlas till det dokumenterade profilformatet. Du kan göra detta själv eller frivilligt använda instruktionen och exempelprompten i valfri AI-tjänst.
 
@@ -70,11 +72,11 @@ Vid uppdatering från den tidigare utvecklingsversionen bevaras profilernas ID o
 
 ## Insamling, programbilder och rättelser
 
-Från beta.2 finns **Registrera profil** i kortet: registrera från nu med manuellt eller tidsbestämt avslut, eller välj ett tidigare intervall ur Home Assistants Recorder. Båda flödena ger ett separat utkast med kurva och justerbara gränser. Körningen tillförs först efter granskning och bekräftelse, till en ny eller befintlig profil. Se [registreringsflödet och begränsningarna](docs/profile-registration.md).
+Från beta.2 finns **Profiler och körningar → Registrera profil** i kortet: registrera från nu med manuellt eller tidsbestämt avslut, eller välj ett tidigare intervall ur Home Assistants Recorder. Båda flödena ger ett separat utkast med kurva och justerbara gränser. Körningen tillförs först efter granskning och bekräftelse, till en ny eller befintlig profil. Se [registreringsflödet och begränsningarna](docs/profile-registration.md).
 
 När en effektsensor är ansluten börjar insamlingen automatiskt. Effekt över startgränsen (standard 5 W) behöver från beta.3 bestå under **Bekräfta aktivitet** (standard 30 sekunder, valbart 0–120). Därefter sparas körningen från den första höga avläsningen, inklusive energin under bekräftelsen. En kort knapptryckning följd av fördröjd start räknas därför inte som en körning. Sätt 0 för den tidigare direkta starten. En verklig programstart som bara ger korta effekttoppar kan kräva en kortare bekräftelsetid; kontrollera mot apparatens kurva. Under vilogränsen (standard 1 W) i tio minuter bekräftar slutet. Bekräftelsetiden räknas inte in i energi eller programprofil. En lång avslutning kring 3 W behålls i mätningen.
 
-Märk programmet under **Senaste körningarna** i kortet. Märkningen går att ändra eller ta bort. Varje programprofil räknas om från sina märkta, fullständiga körningar. Omärkta körningar används inte för att gissa programnamn.
+Märk programmet under **Profiler och körningar → Senaste körningarna** i kortet. Märkningen går att ändra eller ta bort. Varje programprofil räknas om från sina märkta, fullständiga körningar. Omärkta körningar används inte för att gissa programnamn.
 
 Du kan fotografera programvalet vid start och senare lämna bilden tillsammans med datum/starttid och exporterad körning för analys. Bilden behöver visa programnumret och eventuella tillval. **Integrationen tolkar eller laddar inte upp bilder.** Bildens filtid ensam är ingen säker märkning, särskilt om maskinen har fördröjd start.
 
@@ -86,7 +88,13 @@ Som första underlag räcker en märkt körning per program. Kortet visar när u
 
 ## Dashboard-kort
 
-Kortet ingår i integrationen och uppdateras tillsammans med den. Programnamn, pris och bästa start syns direkt; klicka på programmet för att fälla ut energi, sluttid, underlag och besparing. Det visar alla profilernas kostnad, bästa start, återgång till vila, energi, underlag och besparing mot start nu. När effektmätning är aktiverad kan kortet också märka de fem senaste körningarna. Äldre körningar nås via åtgärderna nedan.
+Kortet ingår i integrationen och uppdateras tillsammans med den. Programraderna visar kostnad vid **Beräknad start**, billigaste start och dess kostnad. Startvalet följer **Nu** som standard, eller ett eget datum och klockslag i Home Assistants tidszon. Valet gäller bara detta kort och sparas inte över sidladdning. Det ändrar inte programsensorernas billigaste start och styr inte maskinen.
+
+Grafen visar hela den tillgängliga framtida prisperioden samt programmens beräknade effekt vid vald start. Vänster skala är pris/kWh, höger skala är W. Priset färgas grönt vid prognosens lägsta värde, gult däremellan och rött vid dess högsta. Färgerna är relativa till just denna prognos, inte fasta prisgränser. Negativa priser stöds; oförändrat pris visas gult. Saknade prisintervall lämnas tomma och ger ingen beräknad kostnad om körningen inte täcks helt. Profilkurvor kan döljas med respektive knapp. Piltangenterna läser grafvärden när grafen har fokus; Escape stänger värderutan.
+
+Klicka på ett program för energi, längd, antal underlag och beräknad återgång till vila. Fullständigt namn finns i den utfällda raden även när ett långt namn kortas i översikten. **Profiler och körningar** samlar filimport, registrering och de fem senaste körningarna bakom en utfällning. Grafen kan också fällas ihop. Hur mycket som ryms beror på kortets bredd och antalet profiler.
+
+**Graf och valbar start kräver administratör.** De läser skyddade profilkurvor via den nya skrivskyddade åtgärden `get_plan`. Övriga användare behåller översikten med programsensorernas billigaste kostnad och start. Minutkurvor och prislistor läggs inte till i sensors historikattribut. Beräkningen sker utanför Home Assistants eventloop med samma energimotor som tidigare.
 
 **Åter i vila betyder inte verifierad färdigtid för disken.** Detta behöver kontrolleras mot maskinens färdigindikering. Kostnaden beräknas från profilens uppmätta tidskurva och kan inte verifiera om sensorn mäter hela maskinens förbrukning.
 
@@ -97,7 +105,7 @@ type: custom:diskpilot-card
 title: Diskmaskinen
 ```
 
-Har du flera maskiner väljer du vilken i kortets visuella inställningar. YAML-baserade dashboardresurser ändras inte automatiskt. Lägg i så fall till modulen `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.4` bland dina resurser.
+Har du flera maskiner väljer du vilken i kortets visuella inställningar. YAML-baserade dashboardresurser ändras inte automatiskt. Lägg i så fall till modulen `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.5` bland dina resurser.
 
 ## Åtgärder för export, import och märkning
 
@@ -107,6 +115,7 @@ Alla åtgärder använder `entry_id` för rätt Diskpilot-instans. Det finns som
 
 | Åtgärd | Indata | Resultat |
 |---|---|---|
+| `dishwasher_optimizer.get_plan` | `entry_id`, valfri `started_at` med tidszon | Skrivskyddat svar med prisintervall, medelprofiler och kostnad vid vald start; administratör krävs |
 | `dishwasher_optimizer.get_runs` | `entry_id`, valfria `offset` och `limit` (1–100) | Svar med körningar, inklusive minutenergi i Wh |
 | `dishwasher_optimizer.label_run` | `entry_id`, `run_id`, `program` (profilens ID eller `unassigned`), valfri `note` | Uppdaterar etikett och räknar om profiler |
 | `dishwasher_optimizer.import_run` | `entry_id`, `started_at` (ISO med tidszon), `duration_seconds`, `energy_wh`, valfritt `program` och `note` | Svar med nytt körnings-id |
@@ -145,7 +154,7 @@ python3.14 -m venv .venv
 .venv/bin/ruff check .
 .venv/bin/ruff format --check .
 .venv/bin/pytest -q
-node --test tests/frontend-registration-time.mjs
+node --test tests/frontend-*.mjs
 ```
 
 Testerna kontrollerar energi, prisgränser, negativa priser, dataluckor, lagring/omstart, etikettändringar, åtgärder och kortregistrering med riktiga Home Assistant-klasser. Testerna ersätter inte en provinstallation i din Home Assistant.
