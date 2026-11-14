@@ -1,6 +1,6 @@
 # Installera Diskpilot
 
-Anvisningarna gäller **0.1.0-beta.4** och Home Assistant **2026.11 eller senare**. Diskpilot installeras som en integration. Dashboard-kortet följer med samma paket.
+Nästa version **0.1.0-beta.5** förbereds och är ännu inte publicerad. Anvisningarna för hämtning nedan gäller senaste publicerade version **0.1.0-beta.4** och Home Assistant **2026.11 eller senare**. Diskpilot installeras som en integration. Dashboard-kortet följer med samma paket.
 
 [Tillbaka till README](../README.md) · [Hämta beta.4](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.4)
 
@@ -115,3 +115,11 @@ Vid manuell uppdatering ersätter du integrationsmappen med samma mapp från den
 | En åtgärd nekas | Att du är inloggad som administratör. |
 
 Vid ett integrationsfel finns loggen under **Inställningar → System → Loggar**. Sök efter `dishwasher_optimizer` eller Diskpilot och ange versionen när du rapporterar ett problem. Dela inte åtkomstnycklar eller hela `.storage`-filer.
+
+## Kompakt kort i beta.5 (förbereds)
+
+Efter uppdatering och omstart visas **Beräknad start**, kostnad per program och billigaste start. **Nu** följer aktuell tid vid omräkning; ett manuellt datum/klockslag gäller bara kortet och styr inte apparaten. Grafens grönt–gult–rött anger lågt–högt pris relativt den tillgängliga prognosen. Programkurvorna visar beräknad effekt i W.
+
+Graf och manuellt startval kräver administratör. Övriga användare ser billigaste kostnad och start. **Profiler och körningar** öppnar befintlig filimport, registrering och senaste körningar. Klicka på en programrad för hela namnet, energi och övriga detaljer.
+
+Lagringsformatet ändras inte. Återgång till beta.4 kräver kodbyte, omstart och omladdning av webbläsaren, utan datamigrering. För YAML-resurser i beta.5: använd `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.5`. Automatiskt hanterade resurser får även en innehållsbaserad cacheversion för alla kortets moduler.

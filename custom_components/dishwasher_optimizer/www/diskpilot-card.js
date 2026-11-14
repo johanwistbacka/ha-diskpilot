@@ -4,16 +4,10 @@ managerUrl.search = new URL(import.meta.url).search;
 const { renderProfileControls } = await import(managerUrl.href);
 const registrationUrl = new URL("./profile-registration.js", import.meta.url);
 registrationUrl.search = new URL(import.meta.url).search;
-const { renderRegistration } = await import(registrationUrl.href);
-const STATUS = {
-  needs_labelled_run: "Behöver en märkt körning",
-  needs_saved_profile: "Behöver en sparad programprofil",
-  not_configured: "Välj prissensor i integrationens inställningar",
-  unavailable: "Prissensorn är inte tillgänglig",
-  no_intervals: "Prissensorn saknar prisintervall",
-  invalid_format: "Kontrollera prissensorns format i inställningarna",
-  insufficient_price_coverage: "Priser saknas för en hel körning inom tidsgränsen",
-};
+const { renderRegistration, zonedTimestamp } = await import(registrationUrl.href);
+const planningUrl = new URL("./plan-view.js", import.meta.url);
+planningUrl.search = new URL(import.meta.url).search;
+const { renderPlanning } = await import(planningUrl.href);
 function el(tag, text, className) {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -45,12 +39,14 @@ class DiskpilotCard extends HTMLElement {
       if (this._drafts?.[run.run_id] === (run.program || "unassigned")) delete this._drafts[run.run_id];
     }
     const state = Object.values(hass.states).filter(s => s.attributes.diskpilot_entry_id === entry);
-    const signature = JSON.stringify(state.map(s => { const {registration, ...attributes}=s.attributes;return [s.state,attributes,registration?.stage]; }));
+    const signature = JSON.stringify([hass.user?.is_admin,hass.config?.time_zone,state.map(s => { const {registration, ...attributes}=s.attributes;return [s.state,attributes,registration?.stage]; })]);
     const current=entries.find(s=>s.attributes.diskpilot_entry_id===entry);
     if(current)this._registrationUpdate?.(current.attributes);
     if (signature !== this._signature) { this._signature = signature; this.render(); }
   }
-  getCardSize() { return 4; }
+  connectedCallback() { this._planningConnect?.(); }
+  disconnectedCallback() { this._planningDisconnect?.(); }
+  getCardSize() { return 7; }
   getGridOptions() { return { columns: 12, rows: "auto", min_columns: 6 }; }
   async service(entryId, service, data) {
     const result = await this._hass.callWS({type:"call_service",domain:"dishwasher_optimizer",service,service_data:{entry_id:entryId,...data},return_response:true});
@@ -62,7 +58,7 @@ class DiskpilotCard extends HTMLElement {
     const root = this.shadowRoot;
     const card = root.querySelector("ha-card") || el("ha-card");
     const active = root.activeElement;
-    const editing = active?.matches('input, select, button, summary') ? {
+    const editing = active?.matches('input, select, button, summary, [data-focus-key]') ? {
       node: active,
       label: active.getAttribute("aria-label"),
       key: active.getAttribute("data-focus-key"),
@@ -70,31 +66,16 @@ class DiskpilotCard extends HTMLElement {
       end: active.selectionEnd,
       direction: active.selectionDirection,
     } : null;
-    this._openPrograms ||= new Set();
-    // Capture native disclosure state before a price update replaces its DOM.
-    for (const details of root.querySelectorAll("details.program")) {
-      const key = details.dataset.programKey;
-      if (details.open) this._openPrograms.add(key);
-      else this._openPrograms.delete(key);
-    }
+    if (root.querySelector("details.manage")) this._toolsOpen = root.querySelector("details.manage").open;
+    if (root.querySelector("details.recent")) this._recentOpen = root.querySelector("details.recent").open;
     root.replaceChildren();
     const style = el("style");
     style.textContent = `
-      ha-card { padding: 20px; color: var(--primary-text-color); }
+      ha-card { padding: 16px; color: var(--primary-text-color); }
       h2 { font-size: 21px; margin: 0 0 6px; font-weight: 600; }
       h3 { font-size: 16px; margin: 24px 0 8px; }
       p { margin: 6px 0 14px; line-height: 1.5; }
       .muted, .note { color: var(--secondary-text-color); font-size: 13px; overflow-wrap:anywhere; }
-      details.program { margin: 0; border-bottom: 1px solid var(--divider-color); }
-      .program > summary { display:grid;grid-template-columns:minmax(0,1fr) auto 12px;gap:4px 12px;align-items:center;min-height:64px;padding:12px 2px;box-sizing:border-box;line-height:1.45;list-style:none; }
-      .program > summary::-webkit-details-marker { display:none; }
-      .program > summary::after { content:"";grid-column:3;grid-row:1 / 3;width:7px;height:7px;border:solid var(--secondary-text-color);border-width:0 2px 2px 0;transform:rotate(45deg);justify-self:center; }
-      .program[open] > summary::after { transform:rotate(225deg); }
-      .program-name { grid-column:1;grid-row:1;min-width:0;overflow-wrap:anywhere;font-size:15px;font-weight:600; }
-      .cost { grid-column:2;grid-row:1;font-size:20px;font-weight:600;white-space:nowrap; }
-      .start { grid-column:1 / 3;grid-row:2;color:var(--secondary-text-color);font-size:13px; }
-      .program-body { padding:0 2px 12px; }
-      .program-body p:last-child { margin-bottom:0; }
       dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 10px 0 0; }
       dt { color: var(--secondary-text-color); font-size: 12px; } dd { margin: 2px 0 0; font-size: 14px; }
       .run { padding: 10px 0; border-bottom: 1px solid var(--divider-color); }
@@ -103,6 +84,7 @@ class DiskpilotCard extends HTMLElement {
       input[type=text], input[type=datetime-local] { background:var(--card-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color); }
       .registration-body { display:grid;gap:12px;min-width:0; } .registration-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;} .registration-field {display:grid;gap:6px;min-width:0;font-size:13px;} .registration-field input,.registration-field select {width:100%;min-width:0;} .registration-chart svg {height:auto;display:block;} .registration-chart {color:var(--primary-color);min-width:0;} .registration-body h3,.registration-body p {margin:0;} .registration-body .review {margin:0;} .secondary {background:transparent;color:var(--primary-color);border:1px solid var(--divider-color);} input[type=range] {min-height:44px;accent-color:var(--primary-color);} .registration-save {justify-self:start;}
       @media(max-width:480px){.registration-grid{grid-template-columns:1fr;}input[type=datetime-local],input[type=text]{font-size:16px;}}
+      details.manage { margin:8px 0 0; }
       details { margin:18px 0; } summary { cursor:pointer;min-height:44px;line-height:44px; } a {color:var(--primary-color);}
       .review { display:flex;align-items:center;gap:10px;min-height:44px;margin:12px 0; } .review input {width:22px;height:22px;flex-shrink:0;}
       .preview { padding:12px;border:1px solid var(--divider-color);border-radius:8px;margin:12px 0; } svg {width:100%;height:70px;color:var(--primary-color);}
@@ -115,68 +97,24 @@ class DiskpilotCard extends HTMLElement {
     root.append(style);
     card.replaceChildren();
     root.append(card);
-    card.append(el("h2", this._config.title || "Diskpilot"));
     const list = statuses(this._hass);
     const status = this._config.entry_id ? list.find(s => s.attributes.diskpilot_entry_id === this._config.entry_id) : list[0];
-    if (!status) { card.append(el("p", "Lägg till Diskpilot-integrationen för din diskmaskin.")); return; }
+    if (!status) { this._planningDisconnect?.(); card.append(el("h2", this._config.title || "Diskpilot")); card.append(el("p", "Lägg till Diskpilot-integrationen för din diskmaskin.")); return; }
     const entryId = status.attributes.diskpilot_entry_id;
     const profiles = status.attributes.profiles || [];
-    const states = Object.values(this._hass.states).filter(s => s.attributes.diskpilot_entry_id === entryId && s.attributes.program);
-    const running = status.attributes.registration?.stage === "recording" ? "Registrering pågår" : status.attributes.registration?.stage === "review" ? "Utkast väntar på granskning" : status.state === "planner" ? "Planering med sparade profiler · effektmätning avstängd" : status.state === "running" ? "Körning pågår" : status.state === "source_unavailable" ? "Effektsensorn är inte tillgänglig" : "Redo att registrera nästa körning";
-    card.append(el("p", status.attributes.start_pending ? "Kontrollerar diskstart · inväntar ihållande aktivitet" : running, "muted"));
-    for (const profile of profiles) {
-      const program=profile.id;
-      const sensor = states.find(s => s.attributes.program === program);
-      const a = sensor?.attributes || {};
-      const section = el("details", undefined, "program");
-      const key = `${entryId}:${program}`;
-      section.dataset.programKey = key;
-      section.open = this._openPrograms.has(key);
-      section.addEventListener("toggle", () => {
-        if (!section.isConnected) return;
-        if (section.open) this._openPrograms.add(key);
-        else this._openPrograms.delete(key);
-      });
-      const heading = el("summary");
-      heading.setAttribute("data-focus-key", key);
-      heading.append(el("span", profile.name, "program-name"));
-      const cost = sensor && !["unknown", "unavailable"].includes(sensor.state) ? Number(sensor.state) : null;
-      heading.append(el("span", cost !== null ? `${number(cost)} ${a.currency || "SEK"}` : "—", "cost"));
-      heading.append(el("span", a.optimal_start ? `Starta helst ${time(a.optimal_start, this._hass)}` : "Starttid saknas", "start"));
-      section.append(heading);
-      const body = el("div", undefined, "program-body");
-      const dl = el("dl");
-      for (const [label, value] of [
-        ["Åter i vila", time(a.optimal_end, this._hass)],
-        ["Energi", a.energy_kwh != null ? `${number(a.energy_kwh, 3)} kWh` : "—"],
-        ["Underlag", a.sample_count === 1 ? "1 märkt körning" : `${a.sample_count || 0} märkta körningar`],
-      ]) { const group = el("div"); group.append(el("dt", label), el("dd", value)); dl.append(group); }
-      body.append(dl);
-      if (a.status !== "ok") body.append(el("p", STATUS[a.status] || "Samlar underlag", "note"));
-      else if (a.sample_count === 1) body.append(el("p", "Första uppskattningen · baserad på en körning", "note"));
-      if (a.saving != null) body.append(el("p", `Beräknad besparing mot start nu: ${number(a.saving)} ${a.currency}`, "note"));
-      body.append(el("p", "Sluttiden avser återgång till viloläge. När disken är klar behöver verifieras separat.", "note"));
-      section.append(body);
-      card.append(section);
-    }
-    if(!profiles.length)card.append(el("p","Lägg till egna profiler och importera deras körningar för att börja planera."));
-    renderProfileControls.call(this,card,entryId,profiles,el,number);
-    renderRegistration.call(this,card,entryId,profiles,status.attributes,el,number);
-    // HA can refresh these sensors while the user is typing a profile name.
-    if (editing) {
-      const replacement = editing.node.isConnected ? editing.node : [...root.querySelectorAll('input, select, button, summary')].find(input => editing.key ? input.getAttribute("data-focus-key") === editing.key : editing.label && input.getAttribute("aria-label") === editing.label);
-      if (replacement) {
-        replacement.focus({preventScroll:true});
-        if (typeof editing.start === "number" && typeof replacement.setSelectionRange === "function") replacement.setSelectionRange(editing.start, editing.end, editing.direction);
-      }
-    }
-    if (status.state === "planner") return;
-    card.append(el("h3", "Senaste körningarna"));
+    renderPlanning.call(this,card,entryId,profiles,status.attributes,el,number,zonedTimestamp);
+    const manage = el("details",undefined,"manage");manage.open=this._toolsOpen??!profiles.length;
+    const manageSummary = el("summary","Profiler och körningar");manageSummary.dataset.focusKey="manage";manage.append(manageSummary);card.append(manage);
+    renderProfileControls.call(this,manage,entryId,profiles,el,number);
+    renderRegistration.call(this,manage,entryId,profiles,status.attributes,el,number);
+    const recent = el("details", undefined, "recent"); recent.open = Boolean(this._recentOpen);
+    const recentSummary = el("summary", "Senaste körningarna"); recentSummary.dataset.focusKey = "recent-runs";
+    recent.append(recentSummary); manage.append(recent);
     const message = el("div", this._message || "", "message");
     message.setAttribute("role", "status"); message.setAttribute("aria-live", "polite");
-    card.append(message);
+    recent.append(message);
     const runs = status.attributes.recent_runs || [];
-    if (!runs.length) card.append(el("p", status.state === "planner" ? "Importera sparade profiler eller anslut en effektmätare när du vill samla nya körningar." : "Här visas körningarna när de har avslutats och viloläget har bekräftats.", "muted"));
+    if (!runs.length) recent.append(el("p", status.state === "planner" ? "Importera sparade profiler eller anslut en effektmätare när du vill samla nya körningar." : "Här visas körningarna när de har avslutats och viloläget har bekräftats.", "muted"));
     for (const run of runs.slice(0, 5)) {
       const row = el("div", undefined, "run");
       row.append(el("div", `${time(run.started_at, this._hass)} · ${number(run.energy_kwh, 3)} kWh · ${number(run.duration_minutes, 0)} min`));
@@ -199,8 +137,17 @@ class DiskpilotCard extends HTMLElement {
         } catch (error) { message.textContent = `Kunde inte spara: ${error.message || error}`; message.classList.add("error"); }
         finally { button.disabled = false; }
       });
-      controls.append(select, button); row.append(controls); card.append(row);
+      controls.append(select, button); row.append(controls); recent.append(row);
     }
+    // HA can refresh these sensors while the user is typing a profile name.
+    if (editing) {
+      const replacement = editing.node.isConnected ? editing.node : [...root.querySelectorAll('input, select, button, summary, [data-focus-key]')].find(input => editing.key ? input.getAttribute("data-focus-key") === editing.key : editing.label && input.getAttribute("aria-label") === editing.label);
+      if (replacement) {
+        replacement.focus({preventScroll:true});
+        if (typeof editing.start === "number" && typeof replacement.setSelectionRange === "function") replacement.setSelectionRange(editing.start, editing.end, editing.direction);
+      }
+    }
+
   }
 }
 

@@ -110,6 +110,7 @@ async def test_numeric_invalid_registration_can_be_reviewed_but_not_trained(hass
 
 CALLS = {
     "get_runs": {},
+    "get_plan": {},
     "label_run": {"run_id": "old", "program": "unassigned"},
     "import_run": {"started_at": BASE.isoformat(), "duration_seconds": 120, "energy_wh": [1, 2]},
     "save_profile": {"name": "Eco"},
@@ -141,6 +142,7 @@ async def test_all_private_services_require_admin_or_system_context(hass, servic
     r.runs = [Run(1000, 120, [1, 2])]
     for name in [
         "async_label",
+        "async_get_plan",
         "async_preview_file",
         "async_import_file",
         "async_start_registration",
