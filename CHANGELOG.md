@@ -1,6 +1,6 @@
 # Ändringslogg
 
-## 0.1.0-beta.6 – förberedd, inte publicerad
+## 0.1.0-beta.6 – 2026-11-14
 
 - Ny prisguide med val mellan befintlig totalprislista, HACS Nord Pool-sensor och Home Assistants inbyggda Nord Pool. Elnätskälla från Eltariff, avtalspåslag inklusive moms och momssats kan ändras utan att historik eller registrering avbryts.
 - Nord Pools servicepriser räknas från valuta/MWh till valuta/kWh. HACS-sensorns momsinställning är uttrycklig. Negativa spotpriser och negativa påslag stöds. Egna färdiga prislistor används oförändrade.

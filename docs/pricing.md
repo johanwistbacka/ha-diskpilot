@@ -1,6 +1,6 @@
 # Priser och avtal
 
-Gäller kommande **0.1.0-beta.6**, ännu inte publicerad. Home Assistant 2026.11 eller senare krävs.
+Gäller **0.1.0-beta.6**. Home Assistant 2026.11 eller senare krävs.
 
 Öppna **Inställningar → Enheter och tjänster → Diskpilot → Konfigurera**. Välj priskälla och tryck **Nästa**. Sparade profiler, märkningar och körningar bevaras när du ändrar avtal. Effekt- och energimätare är fortsatt valfria. Integrationen skapar inga hjälpsensorer.
 
