@@ -1,8 +1,8 @@
 # Installera Diskpilot
 
-Nästa version **0.1.0-beta.5** förbereds och är ännu inte publicerad. Anvisningarna för hämtning nedan gäller senaste publicerade version **0.1.0-beta.4** och Home Assistant **2026.11 eller senare**. Diskpilot installeras som en integration. Dashboard-kortet följer med samma paket.
+Anvisningarna gäller **0.1.0-beta.5** och Home Assistant **2026.11 eller senare**. Diskpilot installeras som en integration. Dashboard-kortet följer med samma paket.
 
-[Tillbaka till README](../README.md) · [Hämta beta.4](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.4)
+[Tillbaka till README](../README.md) · [Hämta beta.5](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.5)
 
 ## Innan du börjar
 
@@ -19,7 +19,7 @@ Marketplace är inbyggd från Home Assistant 2026.11 och ersätter HACS. Stegen 
 1. Öppna **Inställningar → Marketplace** och välj **Add from link / Lägg till från länk**.
 2. Ange `https://github.com/johanwistbacka/ha-diskpilot` och välj **Lägg till**. Anslut GitHub om du blir ombedd. Välj typen **Integration** om Marketplace frågar.
 3. Öppna **Inställningar → Enheter och tjänster → Marketplace** och välj repots enhet. Aktivera den inaktiverade entiteten **Pre-release** och slå sedan på dess brytare.
-4. Återgå till repots sida i Marketplace och installera **0.1.0-beta.4**.
+4. Återgå till repots sida i Marketplace och installera **0.1.0-beta.5**.
 5. Starta om Home Assistant.
 
 **Pre-release har två steg:** att aktivera entiteten i dess inställningar och därefter slå på brytaren. En aktiverad men avstängd brytare visar fortfarande inte betaversioner.
@@ -59,7 +59,7 @@ title: Diskmaskinen
 Om du hanterar resurser i YAML behöver du själv lägga till denna post i din befintliga resurslista:
 
 ```yaml
-- url: /dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.4
+- url: /dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.5
   type: module
 ```
 
@@ -80,7 +80,7 @@ Diskpilot startar aldrig själva apparaten. Profilnamnet och att hela körningen
 ## Uppdatera från beta.1 eller en annan version
 
 1. Avsluta och granska pågående registrering. Ta en säkerhetskopia.
-2. Öppna Diskpilot i Marketplace. Kontrollera att **Pre-release** är på och välj uppdatering till **0.1.0-beta.4**.
+2. Öppna Diskpilot i Marketplace. Kontrollera att **Pre-release** är på och välj uppdatering till **0.1.0-beta.5**.
 3. Starta om Home Assistant och ladda om dashboarden.
 4. Kontrollera att dina profilnamn och antalet körningar finns kvar.
 
@@ -96,7 +96,7 @@ För återställning och återgång, se [säkerhetskopia och återgång](../READ
 
 Använd detta alternativ om du installerar utan Marketplace:
 
-1. Hämta **Source code (zip)** från [beta.4-releasen](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.4) och packa upp arkivet.
+1. Hämta **Source code (zip)** från [beta.5-releasen](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.5) och packa upp arkivet.
 2. Kopiera hela mappen `custom_components/dishwasher_optimizer` till din Home Assistant-konfigurationsmapp, under `custom_components/`. Ta med mappen `www` och alla dess filer.
 3. Kontrollera att sökvägen är `custom_components/dishwasher_optimizer/manifest.json`, utan en extra `ha-diskpilot-…`-mapp mellan nivåerna. Konfigurationsmappen är den som innehåller `configuration.yaml`.
 4. Starta om Home Assistant och fortsätt med [att lägga till integrationen](#2-lägg-till-integrationen).
@@ -116,7 +116,7 @@ Vid manuell uppdatering ersätter du integrationsmappen med samma mapp från den
 
 Vid ett integrationsfel finns loggen under **Inställningar → System → Loggar**. Sök efter `dishwasher_optimizer` eller Diskpilot och ange versionen när du rapporterar ett problem. Dela inte åtkomstnycklar eller hela `.storage`-filer.
 
-## Kompakt kort i beta.5 (förbereds)
+## Kompakt kort i beta.5
 
 Efter uppdatering och omstart visas **Beräknad start**, kostnad per program och billigaste start. **Nu** följer aktuell tid vid omräkning; ett manuellt datum/klockslag gäller bara kortet och styr inte apparaten. Grafens grönt–gult–rött anger lågt–högt pris relativt den tillgängliga prognosen. Programkurvorna visar beräknad effekt i W.
 
