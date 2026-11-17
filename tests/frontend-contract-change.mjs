@@ -9,14 +9,16 @@ const {renderPlanning}=await import('data:text/javascript;base64,'+Buffer.from(v
 
 // Minimal DOM surface: exercise the shipped renderer and request queue, with plotting disabled.
 class Node {
-  constructor(tag){this.tag=tag;this.children=[];this.dataset={};this.style={};this.attrs={};this.isConnected=true;this.clientWidth=0;this.text='';}
+  constructor(tag){this.tag=tag;this.children=[];this.dataset={};this.style={};this.attrs={};this.isConnected=true;this.clientWidth=0;this.text='';this.listeners={};}
   set textContent(value){this.text=value;this.children=[];}
   get textContent(){return this.text+this.children.map(n=>n.textContent).join(' ');}
   append(...nodes){for(const n of nodes){n.remove();this.children.push(n);n.parentNode=this;}}
   remove(){if(this.parentNode){this.parentNode.children=this.parentNode.children.filter(n=>n!==this);this.parentNode=null;}}
   replaceChildren(...nodes){for(const n of this.children)n.parentNode=null;this.children=[];this.text='';this.append(...nodes);}
   setAttribute(key,value){this.attrs[key]=value;}
-  addEventListener(){}
+  addEventListener(event,handler){this.listeners[event]=handler;}
+  click(){if(!this.disabled)this.listeners.click?.();}
+  setCustomValidity(message){this.validityMessage=message;}
   getRootNode(){return{activeElement:null};}
 }
 const el=(tag,text='')=>{const n=new Node(tag);n.textContent=text;return n;};
@@ -45,4 +47,38 @@ test('contract invalidation clears all prices and rejects an old inflight respon
   assert.equal(row.bestPrice.textContent,'5 kr');assert.equal(row.value.textContent,'5 kr');
   assert.match(row.body.textContent,/New contract/);assert.doesNotMatch(row.body.textContent,/Obsolete|Old contract/);
   card._planningDisconnect();
+});
+
+
+test('start shortcuts accumulate while pending, clamp to now and use each program optimum',async()=>{
+  const realNow=Date.now;let clock=Date.parse('2026-11-17T12:00:00Z');Date.now=()=>clock;
+  try{
+    const pending=deferred(),calls=[];
+    const profile={id:'p',name:'Eco',sample_count:2,duration_seconds:60,energy_wh:[10]};
+    const response=input=>({entry_id:'e',now:clock/1000,selected_start:input.started_at?Date.parse(input.started_at)/1000:clock/1000,currency:'SEK',prices:[],price_status:'ok',profiles:[{...profile,cost:1,selected_cost:2,optimal_start:clock/1000+7200}]});
+    const card={_config:{},_hass:{user:{is_admin:true},config:{time_zone:'Europe/Stockholm'},states:{}},service:(_entry,_service,input)=>{calls.push(input);return calls.length===2?pending.promise:Promise.resolve(response(input));}};
+    const root=el('article'),status={plan_revision:1,price_status:'ok'};
+    const draw=()=>renderPlanning.call(card,root,'e',[profile],status,el,String,()=>{});
+    draw();await tick();
+    const f=card._planState,n=f.nodes;
+    assert.equal(n.earlier.disabled,true);
+    n.later.click();n.later.click();n.later.click();
+    assert.equal(f.fixed,'2026-11-17T15:00:00.000Z');
+    assert.equal(n.input.value,'2026-11-17T16:00');
+    assert.equal(f.rows.get('p').value.textContent,'—');
+    pending.resolve(response(calls[1]));await tick();
+    assert.equal(calls.at(-1).started_at,'2026-11-17T15:00:00.000Z');
+    assert.equal(f.data.selected_start,Date.parse(f.fixed)/1000);
+    n.earlier.click();await tick();assert.equal(f.fixed,'2026-11-17T14:00:00.000Z');
+    // Only half an hour remains: one decrement returns to following now.
+    clock=Date.parse('2026-11-17T13:30:00Z');
+    n.earlier.click();await tick();assert.equal(f.followNow,true);assert.equal(n.earlier.disabled,true);assert.deepEqual(calls.at(-1),{});
+    const best=f.rows.get('p').body.children.find(n=>n.tag==='button');best.click();await tick();
+    assert.equal(f.fixed,'2026-11-17T15:30:00.000Z');
+    // Existing selections survive a normal HA refresh.
+    draw();await tick();assert.equal(f.fixed,'2026-11-17T15:30:00.000Z');
+    n.now.click();await tick();assert.equal(f.fixed,null);assert.equal(f.followNow,true);
+    card._hass.user.is_admin=false;draw();assert.equal(n.later.disabled,true);assert.equal(n.earlier.disabled,true);assert.equal(n.now.disabled,true);
+    card._planningDisconnect();
+  }finally{Date.now=realNow;}
 });

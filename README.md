@@ -94,7 +94,7 @@ Som första underlag räcker en märkt körning per program. Kortet visar när u
 
 ## Dashboard-kort
 
-Kortet ingår i integrationen och uppdateras tillsammans med den. Programraderna visar kostnad vid **Beräknad start**, billigaste start och dess kostnad. Startvalet följer **Nu** som standard, eller ett eget datum och klockslag i Home Assistants tidszon. Valet gäller bara detta kort och sparas inte över sidladdning. Det ändrar inte programsensorernas billigaste start och styr inte maskinen.
+Kortet ingår i integrationen och uppdateras tillsammans med den. Programraderna visar kostnad vid **Beräknad start**, billigaste start och dess kostnad. Startvalet följer **Nu** som standard, eller ett eget datum och klockslag i Home Assistants tidszon. Snabbvalen **−1 h**, **Nu** och **+1 h** flyttar starten utan att gå före aktuell tid. Under varje program kan du välja **Välj billigaste start** för att jämföra alla program vid den tidpunkten. Valet gäller bara detta kort och sparas inte över sidladdning. Det ändrar inte programsensorernas billigaste start och styr inte maskinen.
 
 Grafen visar hela den tillgängliga framtida prisperioden samt programmens beräknade effekt vid vald start. Vänster skala är pris/kWh, höger skala är W. Priset färgas grönt vid prognosens lägsta värde, gult däremellan och rött vid dess högsta. Färgerna är relativa till just denna prognos, inte fasta prisgränser. Negativa priser stöds; oförändrat pris visas gult. Saknade prisintervall lämnas tomma och ger ingen beräknad kostnad om körningen inte täcks helt. Profilkurvor kan döljas med respektive knapp. Piltangenterna läser grafvärden när grafen har fokus; Escape stänger värderutan.
 

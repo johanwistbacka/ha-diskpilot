@@ -10,7 +10,7 @@ const css=`
 .plan-view{--plan-low:var(--success-color,#36884d);--plan-mid:var(--warning-color,#c69900);--plan-high:var(--error-color,#d7473e);color:var(--primary-text-color);min-width:0;container-type:inline-size}
 .plan-view [hidden]{display:none!important}
 .plan-head{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.plan-title{flex:1;min-width:100px}.plan-title h2{font-size:18px;margin:0;font-weight:600}.plan-title small{font-size:11px;color:var(--secondary-text-color)}
-.plan-start{display:flex;align-items:end;gap:6px;flex:1;min-width:215px}.plan-field{display:grid;gap:3px;flex:1;min-width:0;font-size:11px;color:var(--secondary-text-color)}
+.plan-start{display:flex;align-items:end;gap:6px;flex:1;min-width:215px;flex-wrap:wrap}.plan-shortcuts{display:flex;gap:6px;flex-wrap:wrap}.plan-view button:disabled{cursor:default}.plan-field{display:grid;gap:3px;flex:1;min-width:0;font-size:11px;color:var(--secondary-text-color)}
 .plan-view input[type=datetime-local]{width:100%;min-width:0;font-size:14px;min-height:36px;padding:5px 6px}.plan-view button{min-height:36px;padding:5px 9px;font-size:12px}.plan-status{font-size:11px;color:var(--secondary-text-color);margin:6px 0 8px;line-height:1.4}
 .plan-columns,.plan-row>summary{display:grid;grid-template-columns:minmax(70px,1fr) 85px minmax(130px,1.3fr) 9px;gap:8px;align-items:center}.plan-columns{font-size:11px;color:var(--secondary-text-color);padding-bottom:4px}.plan-columns span:not(:first-child){text-align:right}
 .plan-row{margin:0;border-top:1px solid var(--divider-color)}.plan-row>summary{min-height:44px;box-sizing:border-box;padding:6px 0;line-height:1.35;list-style:none;font-size:13px}.plan-row>summary::-webkit-details-marker{display:none}.plan-row>summary::after{content:'⌄';color:var(--secondary-text-color);grid-column:4}.plan-row[open]>summary::after{content:'⌃'}
@@ -43,19 +43,35 @@ export function renderPlanning(card,entryId,profiles,status,el,number,zonedTimes
     const node=el('section',undefined,'plan-view'),style=el('style');style.textContent=css;node.append(style);
     const head=el('div',undefined,'plan-head'),title=el('div',undefined,'plan-title'),h2=el('h2'),mode=el('small');title.append(h2,mode);
     const controls=el('div',undefined,'plan-start'),label=el('label',undefined,'plan-field'),input=el('input');input.type='datetime-local';input.setAttribute('aria-label','Beräknad start');input.dataset.focusKey='planning-start';label.append(el('span','Beräknad start'),input);
-    const now=el('button','Nu','secondary');now.type='button';now.setAttribute('aria-label','Använd aktuell tid som start');controls.append(label,now);head.append(title,controls);
+    const shortcuts=el('div',undefined,'plan-shortcuts'),earlier=el('button','−1 h','secondary'),now=el('button','Nu','secondary'),later=el('button','+1 h','secondary');
+    for(const [button,key,caption]of [[earlier,'earlier','Flytta starten en timme bakåt'],[now,'now','Använd aktuell tid som start'],[later,'later','Flytta starten en timme framåt']]){button.type='button';button.dataset.focusKey=`planning-${key}`;button.setAttribute('aria-label',caption);}
+    shortcuts.append(earlier,now,later);controls.append(label,shortcuts);head.append(title,controls);
     const info=el('div',undefined,'plan-status');const columns=el('div',undefined,'plan-columns');columns.append(el('span','Program'),el('span','Kostnad'),el('span','Billigast start'));
     const rows=el('div');const graph=el('details',undefined,'plan-graph');graph.open=true;const summary=el('summary','Pris och förbrukning');summary.dataset.focusKey='planning-graph';
     const legend=el('div',undefined,'plan-legend'),chart=el('div',undefined,'plan-chart'),scale=el('div',undefined,'plan-scale'),message=el('p','', 'plan-message'),retry=el('button','Försök igen','secondary plan-retry');retry.type='button';retry.hidden=true;message.setAttribute('role','status');message.setAttribute('aria-live','polite');graph.append(summary,legend,chart,scale);
-    node.append(head,info,columns,rows,message,retry,graph);f.nodes={node,h2,mode,input,now,info,rows,graph,legend,chart,scale,message,retry};
+    node.append(head,info,columns,rows,message,retry,graph);f.nodes={node,h2,mode,input,now,earlier,later,info,rows,graph,legend,chart,scale,message,retry};
     input.addEventListener('input',()=>{f.editing=true;f.error='';f.queue?.invalidate();f.waiting=false;draw();});
     input.addEventListener('change',()=>{try{const iso=zonedTimestamp(input.value,zone());input.setCustomValidity('');f.fixed=iso;f.followNow=false;f.editing=false;request(true);}catch(error){f.error=error.message||String(error);input.setCustomValidity(f.error);draw();}});
-    now.addEventListener('click',()=>{f.fixed=null;f.followNow=true;f.editing=false;f.error='';input.setCustomValidity('');input.value=localInput(Date.now()/1000,zone());request(true);});
+    now.addEventListener('click',()=>chooseStart(null));
+    earlier.addEventListener('click',()=>shiftStart(-3600));
+    later.addEventListener('click',()=>shiftStart(3600));
     retry.addEventListener('click',()=>request(true));
     graph.addEventListener('toggle',()=>{if(graph.open)drawPlot();});
     if(typeof ResizeObserver!=='undefined'){f.observer=new ResizeObserver(()=>drawPlot());f.observer.observe(chart);}
   }
   const n=f.nodes;card.append(n.node);
+  function chooseStart(seconds){
+    if(!f.hass.user?.is_admin)return;
+    const current=Date.now()/1000;
+    f.followNow=seconds===null||seconds<=current;f.fixed=f.followNow?null:new Date(seconds*1000).toISOString();
+    f.editing=false;f.error='';n.input.setCustomValidity('');
+    n.input.value=localInput(f.followNow?current:seconds,zone());request(true);
+  }
+  function shiftStart(delta){
+    if(f.editing)return;
+    const current=Date.now()/1000,selected=f.followNow?current:Math.max(current,Date.parse(f.fixed)/1000);
+    chooseStart(selected+delta);
+  }
   function request(force=false){
     if(!valid()||!n.node.isConnected||!f.hass.user?.is_admin||f.editing)return;
     if(!f.queue)f.queue=new LatestPlanRequests(
@@ -72,7 +88,7 @@ export function renderPlanning(card,entryId,profiles,status,el,number,zonedTimes
     if(!valid())return;
     const admin=Boolean(f.hass.user?.is_admin);n.h2.textContent=thisCard._config.title||'Diskpilot';
     n.mode.textContent=f.status.registration?.stage==='recording'?'Registrering pågår':f.status.registration?.stage==='review'?'Utkast väntar på granskning':f.status.start_pending?'Kontrollerar diskstart':statusState()==='running'?'Körning pågår':statusState()==='source_unavailable'?'Effektsensorn saknas':'Planering';
-    n.input.disabled=!admin;n.now.disabled=!admin;n.now.setAttribute('aria-pressed',String(f.followNow&&!f.editing));
+    n.input.disabled=!admin;n.now.disabled=!admin;n.earlier.disabled=!admin||f.editing||f.followNow||Date.parse(f.fixed)<=Date.now();n.later.disabled=!admin||f.editing;n.now.setAttribute('aria-pressed',String(f.followNow&&!f.editing));
     const changedZone=f.inputZone!==zone();f.inputZone=zone();
     if(changedZone&&f.editing){f.editing=false;f.error='';n.input.setCustomValidity('');}
     if(!f.editing&&(changedZone||n.node.getRootNode().activeElement!==n.input))n.input.value=localInput(f.followNow?f.data?.selected_start||Date.now()/1000:Date.parse(f.fixed)/1000,zone());
@@ -88,6 +104,7 @@ export function renderPlanning(card,entryId,profiles,status,el,number,zonedTimes
       row.value.textContent=amount(value);row.bestTime.textContent=format(optimalStart,true);row.bestPrice.textContent=Number.isFinite(cost)?amount(cost):'';
       row.summary.setAttribute('aria-label',`${p.name}, ${admin?'kostnad vid vald start':'billigaste kostnad'} ${amount(value)}, billigast ${format(optimalStart)}, ${amount(cost)}`);
       row.body.replaceChildren(el('span',p.name),el('span',`Energi: ${p.energy_kwh==null?'—':number(p.energy_kwh,3)+' kWh'}`),el('span',`Tid: ${p.duration_seconds==null?'—':number(p.duration_seconds/60,1)+' min'}`),el('span',`Underlag: ${p.sample_count||0} märkta körningar`),el('span',`Åter i vila vid vald start: ${format(f.waiting||f.editing||f.error?null:p.selected_end)}`),el('span',`Billigast före: ${format(data?.planning_deadline)}`));
+      if(admin){const best=el('button','Välj billigaste start','secondary');best.type='button';best.dataset.focusKey=`planning-best-${entryId}-${p.id}`;best.setAttribute('aria-label',`Välj billigaste start för ${p.name}`);best.disabled=updating||!Number.isFinite(optimalStart);best.addEventListener('click',()=>chooseStart(optimalStart));row.body.append(best);}
       if(Number.isFinite(value)&&Number.isFinite(cost))row.body.append(el('span',`Skillnad mot billigaste start: ${amount(value-cost)}`));
       if(!p.sample_count)row.body.append(el('p','Behöver en komplett märkt körning.'));
       else if(p.sample_count===1)row.body.append(el('p','Första uppskattningen · baserad på en körning.'));
