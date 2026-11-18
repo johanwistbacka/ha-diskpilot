@@ -26,7 +26,7 @@ const css=`
 export function renderPlanning(card,entryId,profiles,status,el,number,zonedTimestamp) {
   if(this._planEntry!==entryId){
     this._planState?.queue?.dispose();this._planState?.observer?.disconnect();
-    this._planEntry=entryId;this._planState={id:++instance,entryId,followNow:true,fixed:null,editing:false,waiting:false,error:'',data:null,rows:new Map(),hidden:new Set(),nodes:null,queue:null,geometry:null,revision:null};
+    this._planEntry=entryId;this._planState={id:++instance,entryId,followNow:true,fixed:null,editing:false,waiting:false,error:'',expiredBest:false,data:null,rows:new Map(),hidden:new Set(),nodes:null,queue:null,geometry:null,revision:null};
   }
   const f=this._planState;f.hass=this._hass;f.status=status;f.profiles=profiles;
   if(status.price_status==='updating'&&f.invalidatedRevision!==status.plan_revision){
@@ -55,8 +55,8 @@ export function renderPlanning(card,entryId,profiles,status,el,number,zonedTimes
     const rows=el('div');const graph=el('details',undefined,'plan-graph');graph.open=true;const summary=el('summary','Pris och förbrukning');summary.dataset.focusKey='planning-graph';
     const legend=el('div',undefined,'plan-legend'),chart=el('div',undefined,'plan-chart'),scale=el('div',undefined,'plan-scale'),message=el('p','', 'plan-message'),retry=el('button','Försök igen','secondary plan-retry');retry.type='button';retry.hidden=true;message.setAttribute('role','status');message.setAttribute('aria-live','polite');graph.append(summary,legend,chart,scale);
     node.append(head,info,columns,rows,message,retry,graph);f.nodes={node,h2,mode,input,offset,now,earlier,later,info,rows,graph,legend,chart,scale,message,retry};
-    input.addEventListener('input',()=>{f.editing=true;f.error='';f.queue?.invalidate();f.waiting=false;draw();});
-    input.addEventListener('change',()=>{try{const iso=zonedTimestamp(input.value,zone());input.setCustomValidity('');f.fixed=iso;f.followNow=false;f.editing=false;request(true);}catch(error){f.error=error.message||String(error);input.setCustomValidity(f.error);draw();}});
+    input.addEventListener('input',()=>{f.editing=true;f.error='';f.expiredBest=false;f.queue?.invalidate();f.waiting=false;draw();});
+    input.addEventListener('change',()=>{try{const iso=zonedTimestamp(input.value,zone());input.setCustomValidity('');f.fixed=iso;f.followNow=false;f.editing=false;f.expiredBest=false;request(true);}catch(error){f.error=error.message||String(error);input.setCustomValidity(f.error);draw();}});
     now.addEventListener('click',()=>chooseStart(null));
     earlier.addEventListener('click',()=>shiftStart(-3600));
     later.addEventListener('click',()=>shiftStart(3600));
@@ -68,14 +68,15 @@ export function renderPlanning(card,entryId,profiles,status,el,number,zonedTimes
   function chooseStart(seconds){
     if(!f.hass.user?.is_admin)return;
     const current=Date.now()/1000;
-    f.followNow=seconds===null||seconds<=current;f.fixed=f.followNow?null:new Date(seconds*1000).toISOString();
-    f.editing=false;f.error='';n.input.setCustomValidity('');
+    f.followNow=seconds===null;f.fixed=f.followNow?null:new Date(seconds*1000).toISOString();
+    f.editing=false;f.error='';f.expiredBest=false;n.input.setCustomValidity('');
     n.input.value=localInput(f.followNow?current:seconds,zone());request(true);
   }
   function shiftStart(delta){
     if(f.editing)return;
     const current=Date.now()/1000,selected=f.followNow?current:Math.max(current,Date.parse(f.fixed)/1000);
-    chooseStart(selected+delta);
+    const shifted=selected+delta;
+    chooseStart(shifted<=current?null:shifted);
   }
   function request(force=false){
     if(!valid()||!n.node.isConnected||!f.hass.user?.is_admin||f.editing)return;
@@ -132,7 +133,13 @@ export function renderPlanning(card,entryId,profiles,status,el,number,zonedTimes
         row = {section, summary, name, value, bestTime, bestPrice, body, detailName,
           energy, duration, samples, selectedEnd, deadline, bestButton, notes, optimalStart: null};
         bestButton.addEventListener('click', () => {
-          if (!bestButton.disabled) chooseStart(row.optimalStart);
+          if (bestButton.disabled || (f.expiredBest && f.waiting)) return;
+          if (row.optimalStart <= Date.now()/1000) {
+            f.expiredBest = true;
+            request(true);
+            return;
+          }
+          chooseStart(row.optimalStart);
         });
         f.rows.set(p.id, row);
       }
@@ -147,11 +154,14 @@ export function renderPlanning(card,entryId,profiles,status,el,number,zonedTimes
       row.selectedEnd.textContent = `Åter i vila vid vald start: ${format(f.waiting || f.editing || f.error ? null : p.selected_end)}`;
       row.deadline.textContent = `Billigast före: ${format(data?.planning_deadline)}`;
       row.optimalStart = optimalStart;
-      row.bestButton.hidden = !admin;
-      row.bestButton.disabled = !admin || updating || !Number.isFinite(optimalStart);
+      const bestAtCalculation = Number.isFinite(optimalStart) && optimalStart === data?.now;
+      row.bestButton.hidden = !admin || bestAtCalculation;
+      row.bestButton.disabled = !admin || updating || bestAtCalculation || !Number.isFinite(optimalStart);
+      if (row.bestButton.disabled && n.node.getRootNode().activeElement === row.bestButton) row.summary.focus();
       row.bestButton.setAttribute('aria-label', `Välj billigaste start för ${p.name}`);
 
       const notes = [];
+      if (admin && bestAtCalculation) notes.push(el('p', 'Billigast vid beräkningen var att starta direkt. Använd Nu för att jämföra.'));
       if (Number.isFinite(value) && Number.isFinite(cost)) {
         notes.push(el('span', `Skillnad mot billigaste start: ${amount(value-cost)}`));
       }
@@ -162,7 +172,10 @@ export function renderPlanning(card,entryId,profiles,status,el,number,zonedTimes
       row.notes.replaceChildren(...notes);
       row.color=palette[index%palette.length];row.dash=['','5 3','2 3','8 3','5 2 1 2','1 2'][index%6];
     });
-    n.retry.hidden=!f.error||!admin;n.message.textContent=!admin?'Graf och valbar start kräver administratör, eftersom profilkurvorna är skyddade.':updating?statuses.updating:f.error?`Kunde inte hämta planeringen: ${f.error}`:f.editing?'Välj och bekräfta starttiden.':f.waiting?'Beräknar vald start…':data&&data.price_status!=='ok'?statuses[data.price_status]||'Framtida priser saknas.':data&&source.some(p=>p.sample_count&&p.selected_cost===null)?'Priser saknas för en hel körning vid vald start.':'';
+    const progress = f.expiredBest ? 'Startförslaget har passerat. Uppdaterar startförslagen…' : 'Beräknar vald start…';
+    const result = data&&data.price_status!=='ok'?statuses[data.price_status]||'Framtida priser saknas.':data&&source.some(p=>p.sample_count&&p.selected_cost===null)?'Priser saknas för en hel körning vid vald start.':'';
+    const settledMessage = f.expiredBest ? `Startförslaget har passerat. Startförslagen har uppdaterats. ${result}`.trimEnd() : result;
+    n.retry.hidden=!f.error||!admin;n.message.textContent=!admin?'Graf och valbar start kräver administratör, eftersom profilkurvorna är skyddade.':updating?statuses.updating:f.error?`Kunde inte hämta planeringen: ${f.error}`:f.editing?'Välj och bekräfta starttiden.':f.waiting?progress:settledMessage;
     n.chart.hidden=Boolean(updating||f.waiting||f.editing||f.error);n.legend.hidden=n.chart.hidden;n.scale.hidden=n.chart.hidden;
     n.graph.setAttribute('aria-busy',String(f.waiting));
     drawPlot();

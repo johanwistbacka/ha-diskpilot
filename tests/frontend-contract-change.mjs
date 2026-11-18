@@ -102,3 +102,42 @@ test('start shortcuts accumulate while pending, clamp to now and use each progra
     card._planningDisconnect();
   }finally{Date.now=realNow;}
 });
+
+test('an expired cheapest start refreshes the proposal without changing a fixed selection',async()=>{
+  const realNow=Date.now;
+  const start=Date.parse('2026-11-17T12:00:00Z');
+  let clock=start;
+  Date.now=()=>clock;
+  try{
+    const calls=[], refresh=deferred();
+    const profile={id:'p',name:'Eco',sample_count:2,duration_seconds:60,energy_wh:[10]};
+    const response=(input,optimalStart)=>({entry_id:'e',now:clock/1000,selected_start:input.started_at?Date.parse(input.started_at)/1000:clock/1000,currency:'SEK',prices:[],price_status:'ok',profiles:[{...profile,cost:1,selected_cost:2,optimal_start:optimalStart/1000}]});
+    const card={_config:{},_hass:{user:{is_admin:true},config:{time_zone:'UTC'},states:{}},service:(_entry,_service,input)=>{
+      calls.push(input);
+      return calls.length===3?refresh.promise:Promise.resolve(response(input,start+(calls.length<3?1800:10800)*1000));
+    }};
+    renderPlanning.call(card,el('article'),'e',[profile],{plan_revision:1,price_status:'ok'},el,String,()=>{});
+    await tick();
+    const f=card._planState;
+    f.nodes.later.click();
+    await tick();
+    const originalSelection=f.fixed;
+    const best=f.rows.get('p').bestButton;
+    clock=start+1800*1000;
+    best.click();
+    assert.deepEqual(calls.at(-1),{started_at:originalSelection});
+    assert.equal(f.nodes.input.value,'2026-11-17T13:00');
+    assert.match(f.nodes.message.textContent,/har passerat/);
+    best.click();
+    assert.equal(calls.length,3);
+    refresh.resolve(response(calls.at(-1),start+10800*1000));
+    await tick();
+    assert.equal(f.fixed,originalSelection);
+    assert.equal(f.rows.get('p').value.textContent,'2 kr');
+    best.click();
+    await tick();
+    assert.deepEqual(calls.at(-1),{started_at:'2026-11-17T15:00:00.000Z'});
+    assert.equal(f.nodes.message.textContent,'');
+    card._planningDisconnect();
+  }finally{Date.now=realNow;}
+});

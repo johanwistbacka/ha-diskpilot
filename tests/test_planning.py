@@ -82,6 +82,28 @@ def test_gaps_never_become_zero_and_view_does_not_change_optimum():
     assert view["profiles"][0]["cost"] == -0.015
 
 
+def test_expired_optimum_is_recomputed_without_changing_the_selection_or_snapshot():
+    attributes = intervals()
+    attributes["prices"][1]["value"] = 5
+    plan = prepare_plan(runs(), {"eco": "Eco"}, CONFIG, attributes, NOW)
+    assert plan["results"]["eco"]["optimal_start"] == NOW
+
+    now = NOW + 910
+    selected = NOW + 1800
+    view = planning_view(plan, now, selected)
+    row = view["profiles"][0]
+    assert view["selected_start"] == selected
+    assert row["optimal_start"] == now
+    assert row["cost"] == pytest.approx(0.075)
+    assert row["selected_cost"] == pytest.approx(0.075)
+    assert plan["results"]["eco"]["optimal_start"] == NOW
+
+    exhausted = planning_view(plan, NOW + 3600, selected)["profiles"][0]
+    assert exhausted["optimal_start"] is None
+    assert exhausted["cost"] is None
+    assert exhausted["selected_cost"] == pytest.approx(0.075)
+
+
 async def test_runtime_plan_is_transient_without_meter_or_recorder_arrays(hass):
     entry = SimpleNamespace(entry_id="plan", title="Plan", data=CONFIG, options={})
     runtime = Runtime(hass, entry)
