@@ -54,9 +54,15 @@ test('start shortcuts accumulate while pending, clamp to now and use each progra
   const realNow=Date.now;let clock=Date.parse('2026-11-17T12:00:00Z');Date.now=()=>clock;
   try{
     const pending=deferred(),calls=[];
+    let nextResponse;
     const profile={id:'p',name:'Eco',sample_count:2,duration_seconds:60,energy_wh:[10]};
     const response=input=>({entry_id:'e',now:clock/1000,selected_start:input.started_at?Date.parse(input.started_at)/1000:clock/1000,currency:'SEK',prices:[],price_status:'ok',profiles:[{...profile,cost:1,selected_cost:2,optimal_start:clock/1000+7200}]});
-    const card={_config:{},_hass:{user:{is_admin:true},config:{time_zone:'Europe/Stockholm'},states:{}},service:(_entry,_service,input)=>{calls.push(input);return calls.length===2?pending.promise:Promise.resolve(response(input));}};
+    const card={_config:{},_hass:{user:{is_admin:true},config:{time_zone:'Europe/Stockholm'},states:{}},service:(_entry,_service,input)=>{
+      calls.push(input);
+      const held = calls.length === 2 ? pending : nextResponse;
+      nextResponse = null;
+      return held ? held.promise : Promise.resolve(response(input));
+    }};
     const root=el('article'),status={plan_revision:1,price_status:'ok'};
     const draw=()=>renderPlanning.call(card,root,'e',[profile],status,el,String,()=>{});
     draw();await tick();
@@ -72,12 +78,26 @@ test('start shortcuts accumulate while pending, clamp to now and use each progra
     n.earlier.click();await tick();assert.equal(f.fixed,'2026-11-17T14:00:00.000Z');
     // Only half an hour remains: one decrement returns to following now.
     clock=Date.parse('2026-11-17T13:30:00Z');
-    n.earlier.click();await tick();assert.equal(f.followNow,true);assert.equal(n.earlier.disabled,true);assert.deepEqual(calls.at(-1),{});
-    const best=f.rows.get('p').body.children.find(n=>n.tag==='button');best.click();await tick();
+    const clamped = nextResponse = deferred();
+    n.earlier.click();
+    assert.equal(f.followNow,true);assert.equal(n.earlier.disabled,true);assert.deepEqual(calls.at(-1),{});
+    assert.equal(n.input.value,'2026-11-17T14:30');
+    assert.equal(f.rows.get('p').value.textContent,'—');
+    clamped.resolve(response({}));await tick();
+    const best=f.rows.get('p').body.children.find(n=>n.tag==='button');
+    const cheapest = nextResponse = deferred();
+    best.click();
+    assert.equal(f.rows.get('p').body.children.find(n=>n.tag==='button'),best);
+    cheapest.resolve(response(calls.at(-1)));await tick();
+    assert.equal(f.rows.get('p').body.children.find(n=>n.tag==='button'),best);
     assert.equal(f.fixed,'2026-11-17T15:30:00.000Z');
     // Existing selections survive a normal HA refresh.
     draw();await tick();assert.equal(f.fixed,'2026-11-17T15:30:00.000Z');
-    n.now.click();await tick();assert.equal(f.fixed,null);assert.equal(f.followNow,true);
+    const reset = nextResponse = deferred();
+    n.now.click();
+    assert.equal(n.input.value,'2026-11-17T14:30');
+    assert.equal(f.fixed,null);assert.equal(f.followNow,true);
+    reset.resolve(response({}));await tick();
     card._hass.user.is_admin=false;draw();assert.equal(n.later.disabled,true);assert.equal(n.earlier.disabled,true);assert.equal(n.now.disabled,true);
     card._planningDisconnect();
   }finally{Date.now=realNow;}

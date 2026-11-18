@@ -1,6 +1,6 @@
 /* Card-local planning. Every cost comes from the backend's existing energy engine. */
 const dataUrl=new URL('./plan-data.js',import.meta.url);dataUrl.search=new URL(import.meta.url).search;
-const {localInput,priceRange,powerSegments,chartDomain,LatestPlanRequests}=await import(dataUrl.href);
+const {localInput,repeatedTimeOffset,priceRange,powerSegments,chartDomain,LatestPlanRequests}=await import(dataUrl.href);
 let instance=0;
 const palette=['#039be5','#a66dd4','#008f83','#cf791d','#d96a9a','#8c8176'];
 const ns='http://www.w3.org/2000/svg';
@@ -10,16 +10,16 @@ const css=`
 .plan-view{--plan-low:var(--success-color,#36884d);--plan-mid:var(--warning-color,#c69900);--plan-high:var(--error-color,#d7473e);color:var(--primary-text-color);min-width:0;container-type:inline-size}
 .plan-view [hidden]{display:none!important}
 .plan-head{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.plan-title{flex:1;min-width:100px}.plan-title h2{font-size:18px;margin:0;font-weight:600}.plan-title small{font-size:11px;color:var(--secondary-text-color)}
-.plan-start{display:flex;align-items:end;gap:6px;flex:1;min-width:215px;flex-wrap:wrap}.plan-shortcuts{display:flex;gap:6px;flex-wrap:wrap}.plan-view button:disabled{cursor:default}.plan-field{display:grid;gap:3px;flex:1;min-width:0;font-size:11px;color:var(--secondary-text-color)}
+.plan-start{display:flex;align-items:end;gap:6px;flex:1;min-width:215px;flex-wrap:wrap}.plan-shortcuts{display:flex;gap:6px;flex-wrap:wrap}.plan-view button:disabled{cursor:default}.plan-field{display:grid;gap:3px;flex:1 1 180px;min-width:0;font-size:11px;color:var(--secondary-text-color)}
 .plan-view input[type=datetime-local]{width:100%;min-width:0;font-size:14px;min-height:36px;padding:5px 6px}.plan-view button{min-height:36px;padding:5px 9px;font-size:12px}.plan-status{font-size:11px;color:var(--secondary-text-color);margin:6px 0 8px;line-height:1.4}
 .plan-columns,.plan-row>summary{display:grid;grid-template-columns:minmax(70px,1fr) 85px minmax(130px,1.3fr) 9px;gap:8px;align-items:center}.plan-columns{font-size:11px;color:var(--secondary-text-color);padding-bottom:4px}.plan-columns span:not(:first-child){text-align:right}
 .plan-row{margin:0;border-top:1px solid var(--divider-color)}.plan-row>summary{min-height:44px;box-sizing:border-box;padding:6px 0;line-height:1.35;list-style:none;font-size:13px}.plan-row>summary::-webkit-details-marker{display:none}.plan-row>summary::after{content:'⌄';color:var(--secondary-text-color);grid-column:4}.plan-row[open]>summary::after{content:'⌃'}
-.plan-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.plan-cost{text-align:right;white-space:nowrap;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}.plan-best{text-align:right;font-size:12px;font-variant-numeric:tabular-nums}.plan-best-price{margin-left:6px;color:var(--secondary-text-color);white-space:nowrap}.plan-body{padding:4px 0 10px;display:flex;flex-wrap:wrap;gap:5px 16px;font-size:12px;color:var(--secondary-text-color)}.plan-body p{flex-basis:100%;margin:0;font-size:12px}
+.plan-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.plan-cost{text-align:right;white-space:nowrap;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}.plan-best{text-align:right;font-size:12px;font-variant-numeric:tabular-nums}.plan-best-price{margin-left:6px;color:var(--secondary-text-color);white-space:nowrap}.plan-body{padding:4px 0 10px;display:flex;flex-wrap:wrap;gap:5px 16px;font-size:12px;color:var(--secondary-text-color)}.plan-body-notes{display:contents}.plan-body p{flex-basis:100%;margin:0;font-size:12px}
 .plan-graph{border-top:1px solid var(--divider-color);margin:4px 0 0}.plan-graph>summary{min-height:36px;line-height:1.4;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;list-style:none}.plan-graph>summary::after{content:'⌄';color:var(--secondary-text-color)}.plan-graph[open]>summary::after{content:'⌃'}.plan-graph>summary::-webkit-details-marker{display:none}
 .plan-legend{display:flex;align-items:center;gap:4px 6px;flex-wrap:wrap;font-size:11px}.plan-legend>span,.plan-view .curve-toggle{display:inline-flex;align-items:center;gap:5px}.plan-view .curve-toggle{background:var(--secondary-background-color);color:var(--primary-text-color);border:0;min-height:30px;padding:3px 6px;font-size:11px;max-width:calc(50% - 6px);overflow-wrap:anywhere}.plan-view .curve-toggle[aria-pressed=false]{color:var(--secondary-text-color);text-decoration:line-through}.plan-view .curve-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.plan-swatch{display:inline-block;width:17px;height:0;border-top:3px solid;flex:none}.plan-price-swatch{height:3px;border:0;width:22px;background:linear-gradient(90deg,var(--plan-low),var(--plan-mid),var(--plan-high))}
 .plan-chart{position:relative;min-width:0}.plan-chart svg{display:block;width:100%;height:auto;font-size:11px;color:var(--secondary-text-color);overflow:visible}.plan-chart svg text{fill:var(--secondary-text-color)}.plan-chart .grid{stroke:var(--divider-color);stroke-width:1}.plan-chart .start-line{stroke:var(--secondary-text-color);stroke-width:1;stroke-dasharray:3 4}.plan-motion{transition:transform 300ms ease}.plan-scale{display:flex;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;font-size:11px;color:var(--secondary-text-color);font-variant-numeric:tabular-nums}.plan-color-bar{display:inline-block;vertical-align:middle;width:48px;height:4px;margin:0 5px;background:linear-gradient(90deg,var(--plan-low),var(--plan-mid),var(--plan-high))}
 .plan-message{font-size:12px;line-height:1.4;margin:5px 0!important;color:var(--secondary-text-color)}.plan-message:empty{display:none}.plan-tooltip{position:absolute;z-index:2;max-width:min(240px,90%);white-space:pre-line;pointer-events:none;background:var(--card-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color);border-radius:6px;padding:7px 9px;font-size:12px;box-shadow:0 2px 8px #0002}.plan-tooltip[hidden]{display:none}.plan-retry{margin-top:5px}.plan-chart svg:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}
-@container(max-width:480px){.plan-head{gap:6px}.plan-title{display:flex;gap:8px;align-items:baseline}.plan-start{flex-basis:100%;min-width:0}.plan-view input[type=datetime-local]{font-size:16px;min-height:40px}.plan-columns,.plan-row>summary{grid-template-columns:minmax(40px,1fr) 64px 88px 8px;gap:5px}.plan-best{font-size:11px}.plan-best-price{display:block;margin:1px 0 0}.plan-cost{font-size:14px}.plan-name{font-size:12px}.plan-chart svg{font-size:11px}}
+@container(max-width:480px){.plan-head{gap:6px}.plan-title{display:flex;gap:8px;align-items:baseline}.plan-start{flex-basis:100%;min-width:0}.plan-field{flex-basis:100%}.plan-view input[type=datetime-local]{font-size:16px;min-height:40px}.plan-columns,.plan-row>summary{grid-template-columns:minmax(40px,1fr) 64px 88px 8px;gap:5px}.plan-best{font-size:11px}.plan-best-price{display:block;margin:1px 0 0}.plan-cost{font-size:14px}.plan-name{font-size:12px}.plan-chart svg{font-size:11px}}
 @media(pointer:coarse){.plan-view button,.plan-view input[type=datetime-local]{min-height:44px}.plan-view .curve-toggle{min-height:44px}}@media(prefers-reduced-motion:reduce){.plan-motion{transition:none}}
 `;
 
@@ -43,13 +43,18 @@ export function renderPlanning(card,entryId,profiles,status,el,number,zonedTimes
     const node=el('section',undefined,'plan-view'),style=el('style');style.textContent=css;node.append(style);
     const head=el('div',undefined,'plan-head'),title=el('div',undefined,'plan-title'),h2=el('h2'),mode=el('small');title.append(h2,mode);
     const controls=el('div',undefined,'plan-start'),label=el('label',undefined,'plan-field'),input=el('input');input.type='datetime-local';input.setAttribute('aria-label','Beräknad start');input.dataset.focusKey='planning-start';label.append(el('span','Beräknad start'),input);
+    const offset=el('span');
+    offset.id=`planning-offset-${f.id}`;
+    offset.hidden=true;
+    input.setAttribute('aria-describedby',offset.id);
+    label.append(offset);
     const shortcuts=el('div',undefined,'plan-shortcuts'),earlier=el('button','−1 h','secondary'),now=el('button','Nu','secondary'),later=el('button','+1 h','secondary');
     for(const [button,key,caption]of [[earlier,'earlier','Flytta starten en timme bakåt'],[now,'now','Använd aktuell tid som start'],[later,'later','Flytta starten en timme framåt']]){button.type='button';button.dataset.focusKey=`planning-${key}`;button.setAttribute('aria-label',caption);}
     shortcuts.append(earlier,now,later);controls.append(label,shortcuts);head.append(title,controls);
     const info=el('div',undefined,'plan-status');const columns=el('div',undefined,'plan-columns');columns.append(el('span','Program'),el('span','Kostnad'),el('span','Billigast start'));
     const rows=el('div');const graph=el('details',undefined,'plan-graph');graph.open=true;const summary=el('summary','Pris och förbrukning');summary.dataset.focusKey='planning-graph';
     const legend=el('div',undefined,'plan-legend'),chart=el('div',undefined,'plan-chart'),scale=el('div',undefined,'plan-scale'),message=el('p','', 'plan-message'),retry=el('button','Försök igen','secondary plan-retry');retry.type='button';retry.hidden=true;message.setAttribute('role','status');message.setAttribute('aria-live','polite');graph.append(summary,legend,chart,scale);
-    node.append(head,info,columns,rows,message,retry,graph);f.nodes={node,h2,mode,input,now,earlier,later,info,rows,graph,legend,chart,scale,message,retry};
+    node.append(head,info,columns,rows,message,retry,graph);f.nodes={node,h2,mode,input,offset,now,earlier,later,info,rows,graph,legend,chart,scale,message,retry};
     input.addEventListener('input',()=>{f.editing=true;f.error='';f.queue?.invalidate();f.waiting=false;draw();});
     input.addEventListener('change',()=>{try{const iso=zonedTimestamp(input.value,zone());input.setCustomValidity('');f.fixed=iso;f.followNow=false;f.editing=false;request(true);}catch(error){f.error=error.message||String(error);input.setCustomValidity(f.error);draw();}});
     now.addEventListener('click',()=>chooseStart(null));
@@ -91,25 +96,70 @@ export function renderPlanning(card,entryId,profiles,status,el,number,zonedTimes
     n.input.disabled=!admin;n.now.disabled=!admin;n.earlier.disabled=!admin||f.editing||f.followNow||Date.parse(f.fixed)<=Date.now();n.later.disabled=!admin||f.editing;n.now.setAttribute('aria-pressed',String(f.followNow&&!f.editing));
     const changedZone=f.inputZone!==zone();f.inputZone=zone();
     if(changedZone&&f.editing){f.editing=false;f.error='';n.input.setCustomValidity('');}
-    if(!f.editing&&(changedZone||n.node.getRootNode().activeElement!==n.input))n.input.value=localInput(f.followNow?f.data?.selected_start||Date.now()/1000:Date.parse(f.fixed)/1000,zone());
+    const selected = f.followNow
+      ? (!f.waiting && !f.error && f.data?.selected_start != null ? f.data.selected_start : Date.now()/1000)
+      : Date.parse(f.fixed)/1000;
+    if (!f.editing) {
+      const localTime = localInput(selected, zone());
+      if (changedZone || n.node.getRootNode().activeElement !== n.input) n.input.value = localTime;
+      n.offset.textContent = repeatedTimeOffset(selected, zone(), localTime);
+    }
+    n.offset.hidden = f.editing || !n.offset.textContent;
     const updating=f.status.price_status==='updating';const data=updating?null:f.data;f.currency=data?.currency||nativeProfiles()[0]?.currency||'SEK';const prices=data?.prices||[];let lastPrice=null;for(const p of prices)lastPrice=Math.max(lastPrice??p[1],p[1]);
     n.info.textContent=!admin?'Billigaste kostnad och start · enligt programsensorerna':data?`${lastPrice?'Priser till '+format(lastPrice):statuses[data.price_status]||'Framtida priser saknas.'} · ${f.followNow?'Följer Nu':'Vald start'} · ${data.currency}/kWh`:updating?statuses.updating:'Planering med sparade profiler';
     const source=data?.profiles||nativeProfiles();const ids=new Set(source.map(p=>p.id));
     for(const[id,row]of f.rows)if(!ids.has(id)){row.section.remove();f.rows.delete(id);}
     source.forEach((p,index)=>{
       let row=f.rows.get(p.id);
-      if(!row){const section=el('details',undefined,'plan-row'),summary=el('summary');summary.dataset.focusKey=`plan-${entryId}-${p.id}`;const name=el('span','', 'plan-name'),value=el('span','', 'plan-cost'),best=el('span','', 'plan-best'),bestTime=el('span'),bestPrice=el('span','', 'plan-best-price'),body=el('div',undefined,'plan-body');best.append(bestTime,bestPrice);summary.append(name,value,best);section.append(summary,body);row={section,summary,name,value,bestTime,bestPrice,body};f.rows.set(p.id,row);}
+      if (!row) {
+        const section = el('details', undefined, 'plan-row');
+        const summary = el('summary');
+        summary.dataset.focusKey = `plan-${entryId}-${p.id}`;
+        const name = el('span', '', 'plan-name'), value = el('span', '', 'plan-cost');
+        const best = el('span', '', 'plan-best'), bestTime = el('span'), bestPrice = el('span', '', 'plan-best-price');
+        best.append(bestTime, bestPrice);
+        summary.append(name, value, best);
+
+        const body = el('div', undefined, 'plan-body');
+        const detailName = el('span'), energy = el('span'), duration = el('span');
+        const samples = el('span'), selectedEnd = el('span'), deadline = el('span');
+        const bestButton = el('button', 'Välj billigaste start', 'secondary');
+        bestButton.type = 'button';
+        bestButton.dataset.focusKey = `planning-best-${entryId}-${p.id}`;
+        const notes = el('div', undefined, 'plan-body-notes');
+        body.append(detailName, energy, duration, samples, selectedEnd, deadline, bestButton, notes);
+        section.append(summary, body);
+        row = {section, summary, name, value, bestTime, bestPrice, body, detailName,
+          energy, duration, samples, selectedEnd, deadline, bestButton, notes, optimalStart: null};
+        bestButton.addEventListener('click', () => {
+          if (!bestButton.disabled) chooseStart(row.optimalStart);
+        });
+        f.rows.set(p.id, row);
+      }
       if(row.section.parentNode!==n.rows)n.rows.append(row.section);
       row.name.textContent=p.name;row.name.title=p.name;const cost=updating?null:p.cost,optimalStart=updating?null:p.optimal_start;const value=updating?null:admin?(!f.waiting&&!f.editing&&!f.error?p.selected_cost:null):cost;
       row.value.textContent=amount(value);row.bestTime.textContent=format(optimalStart,true);row.bestPrice.textContent=Number.isFinite(cost)?amount(cost):'';
       row.summary.setAttribute('aria-label',`${p.name}, ${admin?'kostnad vid vald start':'billigaste kostnad'} ${amount(value)}, billigast ${format(optimalStart)}, ${amount(cost)}`);
-      row.body.replaceChildren(el('span',p.name),el('span',`Energi: ${p.energy_kwh==null?'—':number(p.energy_kwh,3)+' kWh'}`),el('span',`Tid: ${p.duration_seconds==null?'—':number(p.duration_seconds/60,1)+' min'}`),el('span',`Underlag: ${p.sample_count||0} märkta körningar`),el('span',`Åter i vila vid vald start: ${format(f.waiting||f.editing||f.error?null:p.selected_end)}`),el('span',`Billigast före: ${format(data?.planning_deadline)}`));
-      if(admin){const best=el('button','Välj billigaste start','secondary');best.type='button';best.dataset.focusKey=`planning-best-${entryId}-${p.id}`;best.setAttribute('aria-label',`Välj billigaste start för ${p.name}`);best.disabled=updating||!Number.isFinite(optimalStart);best.addEventListener('click',()=>chooseStart(optimalStart));row.body.append(best);}
-      if(Number.isFinite(value)&&Number.isFinite(cost))row.body.append(el('span',`Skillnad mot billigaste start: ${amount(value-cost)}`));
-      if(!p.sample_count)row.body.append(el('p','Behöver en komplett märkt körning.'));
-      else if(p.sample_count===1)row.body.append(el('p','Första uppskattningen · baserad på en körning.'));
-      if(data?.price_basis)row.body.append(el('p',data.price_basis));
-      row.body.append(el('p','Beräknat från sparade minutprofiler. Åter i vila är inte verifierad färdigtid.'));
+      row.detailName.textContent = p.name;
+      row.energy.textContent = `Energi: ${p.energy_kwh == null ? '—' : number(p.energy_kwh, 3) + ' kWh'}`;
+      row.duration.textContent = `Tid: ${p.duration_seconds == null ? '—' : number(p.duration_seconds/60, 1) + ' min'}`;
+      row.samples.textContent = `Underlag: ${p.sample_count || 0} märkta körningar`;
+      row.selectedEnd.textContent = `Åter i vila vid vald start: ${format(f.waiting || f.editing || f.error ? null : p.selected_end)}`;
+      row.deadline.textContent = `Billigast före: ${format(data?.planning_deadline)}`;
+      row.optimalStart = optimalStart;
+      row.bestButton.hidden = !admin;
+      row.bestButton.disabled = !admin || updating || !Number.isFinite(optimalStart);
+      row.bestButton.setAttribute('aria-label', `Välj billigaste start för ${p.name}`);
+
+      const notes = [];
+      if (Number.isFinite(value) && Number.isFinite(cost)) {
+        notes.push(el('span', `Skillnad mot billigaste start: ${amount(value-cost)}`));
+      }
+      if (!p.sample_count) notes.push(el('p', 'Behöver en komplett märkt körning.'));
+      else if (p.sample_count === 1) notes.push(el('p', 'Första uppskattningen · baserad på en körning.'));
+      if (data?.price_basis) notes.push(el('p', data.price_basis));
+      notes.push(el('p', 'Beräknat från sparade minutprofiler. Åter i vila är inte verifierad färdigtid.'));
+      row.notes.replaceChildren(...notes);
       row.color=palette[index%palette.length];row.dash=['','5 3','2 3','8 3','5 2 1 2','1 2'][index%6];
     });
     n.retry.hidden=!f.error||!admin;n.message.textContent=!admin?'Graf och valbar start kräver administratör, eftersom profilkurvorna är skyddade.':updating?statuses.updating:f.error?`Kunde inte hämta planeringen: ${f.error}`:f.editing?'Välj och bekräfta starttiden.':f.waiting?'Beräknar vald start…':data&&data.price_status!=='ok'?statuses[data.price_status]||'Framtida priser saknas.':data&&source.some(p=>p.sample_count&&p.selected_cost===null)?'Priser saknas för en hel körning vid vald start.':'';

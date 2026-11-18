@@ -2,11 +2,24 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import test from 'node:test';
 const source=await readFile(new URL('../custom_components/dishwasher_optimizer/www/plan-data.js',import.meta.url),'utf8');
-const {localInput,priceRange,priceFraction,powerSegments,chartDomain,LatestPlanRequests}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+const {localInput,repeatedTimeOffset,priceRange,priceFraction,powerSegments,chartDomain,LatestPlanRequests}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 
 test('HA zone determines input, regardless of browser zone',()=>{
  assert.equal(localInput(Date.parse('2026-11-14T12:34Z')/1000,'Europe/Stockholm'),'2026-11-14T13:34');
  assert.equal(localInput(Date.parse('2026-07-14T12:34Z')/1000,'Europe/Stockholm'),'2026-07-14T14:34');
+});
+test('distinguishes both occurrences of a repeated local time, including half-hour shifts', () => {
+  const offset = (iso, zone) => {
+    const instant = Date.parse(iso) / 1000;
+    return repeatedTimeOffset(instant, zone, localInput(instant, zone));
+  };
+  assert.equal(offset('2026-10-25T00:30Z', 'Europe/Stockholm'), 'UTC+02:00');
+  assert.equal(offset('2026-10-25T01:30Z', 'Europe/Stockholm'), 'UTC+01:00');
+  assert.equal(offset('2026-10-25T02:30Z', 'Europe/Stockholm'), '');
+  assert.equal(offset('2026-03-29T01:30Z', 'Europe/Stockholm'), '');
+  assert.equal(offset('2026-04-04T14:45Z', 'Australia/Lord_Howe'), 'UTC+11:00');
+  assert.equal(offset('2026-04-04T15:15Z', 'Australia/Lord_Howe'), 'UTC+10:30');
+  assert.equal(offset('2026-11-18T12:00Z', 'Asia/Kathmandu'), '');
 });
 test('relative palette supports negative, flat and absent prices',()=>{
  const range=priceRange([[0,1,-2],[1,2,1],[2,3,4]]);
