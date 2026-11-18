@@ -54,7 +54,9 @@ def _register_services(hass):
     async def get_plan(call):
         try:
             started_at = timestamp(call.data["started_at"]) if "started_at" in call.data else None
-            return await runtime_for(call).async_get_plan(started_at)
+            return await runtime_for(call).async_get_plan(
+                started_at, refresh_program=call.data.get("refresh_program")
+            )
         except (ValueError, TypeError, OverflowError) as err:
             raise ServiceValidationError(str(err)) from err
 
@@ -130,7 +132,9 @@ def _register_services(hass):
         DOMAIN,
         "get_plan",
         get_plan,
-        schema=vol.Schema({**base, vol.Optional("started_at"): str}),
+        schema=vol.Schema(
+            {**base, vol.Optional("started_at"): str, vol.Optional("refresh_program"): str}
+        ),
         supports_response=SupportsResponse.ONLY,
     )
     async_register_admin_service(

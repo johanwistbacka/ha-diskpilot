@@ -116,7 +116,9 @@ test('an expired cheapest start refreshes the proposal without changing a fixed 
       calls.push(input);
       return calls.length===3?refresh.promise:Promise.resolve(response(input,start+(calls.length<3?1800:10800)*1000));
     }};
-    renderPlanning.call(card,el('article'),'e',[profile],{plan_revision:1,price_status:'ok'},el,String,()=>{});
+    const root=el('article');
+    const draw=revision=>renderPlanning.call(card,root,'e',[profile],{plan_revision:revision,price_status:'ok'},el,String,()=>{});
+    draw(1);
     await tick();
     const f=card._planState;
     f.nodes.later.click();
@@ -125,15 +127,21 @@ test('an expired cheapest start refreshes the proposal without changing a fixed 
     const best=f.rows.get('p').bestButton;
     clock=start+1800*1000;
     best.click();
-    assert.deepEqual(calls.at(-1),{started_at:originalSelection});
+    assert.deepEqual(calls.at(-1),{started_at:originalSelection,refresh_program:'p'});
     assert.equal(f.nodes.input.value,'2026-11-17T13:00');
     assert.match(f.nodes.message.textContent,/har passerat/);
     best.click();
     assert.equal(calls.length,3);
+    draw(2); // The latest HA revision should carry the specific refresh through.
     refresh.resolve(response(calls.at(-1),start+10800*1000));
     await tick();
+    assert.equal(calls.length,4);
+    assert.deepEqual(calls.at(-1),{started_at:originalSelection,refresh_program:'p'});
     assert.equal(f.fixed,originalSelection);
     assert.equal(f.rows.get('p').value.textContent,'2 kr');
+    draw(3);
+    await tick();
+    assert.deepEqual(calls.at(-1),{started_at:originalSelection});
     best.click();
     await tick();
     assert.deepEqual(calls.at(-1),{started_at:'2026-11-17T15:00:00.000Z'});

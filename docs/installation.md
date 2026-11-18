@@ -1,8 +1,8 @@
 # Installera Diskpilot
 
-Anvisningarna gäller **0.1.0-beta.6** och Home Assistant **2026.11 eller senare**. Diskpilot installeras som en integration. Dashboard-kortet följer med samma paket.
+Anvisningarna gäller **0.1.0-beta.7** och Home Assistant **2026.11 eller senare**. Diskpilot installeras som en integration. Dashboard-kortet följer med samma paket.
 
-[Tillbaka till README](../README.md) · [Hämta beta.6](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.6)
+[Tillbaka till README](../README.md) · [Hämta beta.7](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.7)
 
 ## Innan du börjar
 
@@ -19,7 +19,7 @@ Marketplace är inbyggd från Home Assistant 2026.11 och ersätter HACS. Stegen 
 1. Öppna **Inställningar → Marketplace** och välj **Add from link / Lägg till från länk**.
 2. Ange `https://github.com/johanwistbacka/ha-diskpilot` och välj **Lägg till**. Anslut GitHub om du blir ombedd. Välj typen **Integration** om Marketplace frågar.
 3. Öppna **Inställningar → Enheter och tjänster → Marketplace** och välj repots enhet. Aktivera den inaktiverade entiteten **Pre-release** och slå sedan på dess brytare.
-4. Återgå till repots sida i Marketplace och installera **0.1.0-beta.6**.
+4. Återgå till repots sida i Marketplace och installera **0.1.0-beta.7**.
 5. Starta om Home Assistant.
 
 **Pre-release har två steg:** att aktivera entiteten i dess inställningar och därefter slå på brytaren. En aktiverad men avstängd brytare visar fortfarande inte betaversioner.
@@ -60,7 +60,7 @@ title: Diskmaskinen
 Om du hanterar resurser i YAML behöver du själv lägga till denna post i din befintliga resurslista:
 
 ```yaml
-- url: /dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.6
+- url: /dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.7
   type: module
 ```
 
@@ -81,7 +81,7 @@ Diskpilot startar aldrig själva apparaten. Profilnamnet och att hela körningen
 ## Uppdatera från beta.1 eller en annan version
 
 1. Avsluta och granska pågående registrering. Ta en säkerhetskopia.
-2. Öppna Diskpilot i Marketplace. Kontrollera att **Pre-release** är på och välj uppdatering till **0.1.0-beta.6**.
+2. Öppna Diskpilot i Marketplace. Kontrollera att **Pre-release** är på och välj uppdatering till **0.1.0-beta.7**.
 3. Starta om Home Assistant och ladda om dashboarden.
 4. Kontrollera att dina profilnamn och antalet körningar finns kvar.
 
@@ -97,7 +97,7 @@ För återställning och återgång, se [säkerhetskopia och återgång](../READ
 
 Använd detta alternativ om du installerar utan Marketplace:
 
-1. Hämta **Source code (zip)** från [beta.6-releasen](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.6) och packa upp arkivet.
+1. Hämta **Source code (zip)** från [beta.7-releasen](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.7) och packa upp arkivet.
 2. Kopiera hela mappen `custom_components/dishwasher_optimizer` till din Home Assistant-konfigurationsmapp, under `custom_components/`. Ta med mappen `www` och alla dess filer.
 3. Kontrollera att sökvägen är `custom_components/dishwasher_optimizer/manifest.json`, utan en extra `ha-diskpilot-…`-mapp mellan nivåerna. Konfigurationsmappen är den som innehåller `configuration.yaml`.
 4. Starta om Home Assistant och fortsätt med [att lägga till integrationen](#2-lägg-till-integrationen).
@@ -117,13 +117,13 @@ Vid manuell uppdatering ersätter du integrationsmappen med samma mapp från den
 
 Vid ett integrationsfel finns loggen under **Inställningar → System → Loggar**. Sök efter `dishwasher_optimizer` eller Diskpilot och ange versionen när du rapporterar ett problem. Dela inte åtkomstnycklar eller hela `.storage`-filer.
 
-## Kompakt kort i beta.5
+## Planering i kortet
 
-Efter uppdatering och omstart visas **Beräknad start**, kostnad per program och billigaste start. **Nu** följer aktuell tid vid omräkning; ett manuellt datum/klockslag gäller bara kortet och styr inte apparaten. Grafens grönt–gult–rött anger lågt–högt pris relativt den tillgängliga prognosen. Programkurvorna visar beräknad effekt i W.
+Efter uppdatering och omstart visas **Beräknad start**, kostnad per program och billigaste start. **Nu** följer aktuell tid vid omräkning; ett manuellt datum/klockslag gäller bara kortet och styr inte apparaten. Grafens grönt–gult–rött anger lågt–högt pris relativt den tillgängliga prognosen. Programkurvorna visar beräknad effekt i W. Använd **−1 h**, **Nu** och **+1 h** för att jämföra starttider. Under varje program kan du välja billigaste start. Om förslaget har passerat uppdateras det och din valda starttid ligger kvar.
 
 Graf och manuellt startval kräver administratör. Övriga användare ser billigaste kostnad och start. **Profiler och körningar** öppnar befintlig filimport, registrering och senaste körningar. Klicka på en programrad för hela namnet, energi och övriga detaljer.
 
-Lagringsformatet ändras inte. Före återgång till beta.5 väljer du **Färdig totalprislista** och återställer tidigare sensormappning; se [prisguiden](pricing.md#uppdatering-felsökning-och-återgång). Starta om och ladda om webbläsaren efter kodbyte. För YAML-resurser i beta.6: använd `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.6`. Automatiskt hanterade resurser får även en innehållsbaserad cacheversion för alla kortets moduler.
+Återgång till beta.6 kräver ingen datamigrering eller ändrad priskonfiguration. Före återgång till beta.5 väljer du **Färdig totalprislista** och återställer tidigare sensormappning; se [prisguiden](pricing.md#uppdatering-felsökning-och-återgång). Starta om och ladda om webbläsaren efter kodbyte. För YAML-resurser i beta.7: använd `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.7`. Automatiskt hanterade resurser får även en innehållsbaserad cacheversion för alla kortets moduler.
 
 ## Priser och avtal i beta.6
 

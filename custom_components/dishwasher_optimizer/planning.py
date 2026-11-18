@@ -42,14 +42,14 @@ def prepare_plan(runs, names, config, attributes, now, market=None):
     }
 
 
-def planning_view(plan, now, selected_start):
+def planning_view(plan, now, selected_start, refresh_program=None):
     """Return transient averages, not raw runs or extra Recorder attributes."""
     profiles = []
     for key, name in plan["names"].items():
         profile = plan["profiles"][key]
         result = plan["results"][key]
         optimal_start = result.get("optimal_start")
-        if profile and optimal_start is not None and optimal_start < now:
+        if key == refresh_program and profile and optimal_start is not None and optimal_start < now:
             current = optimise(profile, now, plan["deadline"], plan["prices"])
             result = {
                 **result,

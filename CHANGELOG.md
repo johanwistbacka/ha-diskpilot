@@ -1,5 +1,12 @@
 # Ändringslogg
 
+## 0.1.0-beta.7 – 2026-11-18
+
+- Snabbvalen **−1 h**, **Nu** och **+1 h** gör det lättare att jämföra kostnader för olika starttider. Kortet uppdaterar kostnad och graf för det senaste valet även vid snabba tryck.
+- Välj billigaste start från programraden för att jämföra programmen vid samma tidpunkt. Har den föreslagna tiden passerat räknas ett nytt förslag fram och vald starttid ligger kvar.
+- Mobilvyn har mer plats för datumfältet och visar UTC-offset när ett lokalt klockslag förekommer två gånger vid höstens tidsomställning.
+- Lagringsformatet och priskonfigurationen är kompatibla med beta.6.
+
 ## 0.1.0-beta.6 – 2026-11-14
 
 - Ny prisguide med val mellan befintlig totalprislista, HACS Nord Pool-sensor och Home Assistants inbyggda Nord Pool. Elnätskälla från Eltariff, avtalspåslag inklusive moms och momssats kan ändras utan att historik eller registrering avbryts.
