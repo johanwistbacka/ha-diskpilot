@@ -4,6 +4,23 @@ export function localInput(seconds, zone) {
   const p=Object.fromEntries(parts.map(v=>[v.type,v.value]));
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
+
+export function repeatedTimeOffset(seconds, zone, localTime) {
+  const instant = Math.floor(seconds / 60) * 60;
+  const localAsUTC = Date.parse(localTime + "Z") / 1000;
+  const offset = localAsUTC - instant;
+  // Compare the neighboring offsets to also handle transitions shorter than an hour.
+  for (const delta of [-86400, 86400]) {
+    const neighbor = instant + delta;
+    const otherOffset = Date.parse(localInput(neighbor, zone) + "Z") / 1000 - neighbor;
+    if (otherOffset === offset || localInput(localAsUTC - otherOffset, zone) !== localTime) continue;
+    const minutes = Math.abs(offset) / 60;
+    const hours = String(Math.floor(minutes / 60)).padStart(2, "0");
+    const remainder = String(minutes % 60).padStart(2, "0");
+    return `UTC${offset < 0 ? "−" : "+"}${hours}:${remainder}`;
+  }
+  return "";
+}
 export function priceRange(prices) {
   let min=Infinity,max=-Infinity;
   for(const row of prices){if(Number.isFinite(row[2])){min=Math.min(min,row[2]);max=Math.max(max,row[2]);}}

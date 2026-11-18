@@ -11,6 +11,10 @@ get_plan:
       example: '2026-11-14T23:00:00+01:00'
       selector:
         text:
+    refresh_program:
+      description: Optional profile ID. Refresh its cheapest start if the cached recommendation has expired.
+      selector:
+        text:
 
 get_runs:
   name: Export runs

@@ -42,17 +42,26 @@ def prepare_plan(runs, names, config, attributes, now, market=None):
     }
 
 
-def planning_view(plan, now, selected_start):
+def planning_view(plan, now, selected_start, refresh_program=None):
     """Return transient averages, not raw runs or extra Recorder attributes."""
     profiles = []
     for key, name in plan["names"].items():
         profile = plan["profiles"][key]
+        result = plan["results"][key]
+        optimal_start = result.get("optimal_start")
+        if key == refresh_program and profile and optimal_start is not None and optimal_start < now:
+            current = optimise(profile, now, plan["deadline"], plan["prices"])
+            result = {
+                **result,
+                **current,
+                "status": "ok" if current["cost"] is not None else "insufficient_price_coverage",
+            }
         selected_cost = cost_at(profile, selected_start, plan["prices"]) if profile else None
         profiles.append(
             {
                 "id": key,
                 "name": name,
-                **plan["results"][key],
+                **result,
                 "duration_seconds": profile.duration_seconds if profile else None,
                 "energy_wh": list(profile.energy_wh) if profile else [],
                 "selected_cost": selected_cost,

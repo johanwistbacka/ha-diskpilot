@@ -287,7 +287,7 @@ class Runtime:
             self.plan_revision += 1
             async_dispatcher_send(self.hass, self.signal)
 
-    async def async_get_plan(self, started_at=None):
+    async def async_get_plan(self, started_at=None, *, refresh_program=None):
         """A card-local comparison never changes options, stored runs or scheduling."""
         self._require_open()
         if self._planning is None:
@@ -298,7 +298,9 @@ class Runtime:
         now = dt_util.utcnow().timestamp()
         selected = now if started_at is None else finite(started_at)
         plan, revision = self._planning, self.plan_revision
-        view = await self.hass.async_add_executor_job(planning_view, plan, now, selected)
+        view = await self.hass.async_add_executor_job(
+            planning_view, plan, now, selected, refresh_program
+        )
         self._require_open()
         return {"entry_id": self.entry.entry_id, "revision": revision, **view}
 

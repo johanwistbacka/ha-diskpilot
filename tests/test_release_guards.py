@@ -1,7 +1,9 @@
 """Release regressions: nonfinite sensors never poison storage; services enforce admin."""
 
+import json
 import math
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -10,13 +12,19 @@ from homeassistant.core import Context, State
 from homeassistant.exceptions import Unauthorized
 
 from custom_components.dishwasher_optimizer import _register_services
-from custom_components.dishwasher_optimizer.const import DEFAULTS, DOMAIN
+from custom_components.dishwasher_optimizer.const import DEFAULTS, DOMAIN, VERSION
 from custom_components.dishwasher_optimizer.engine import Collector, Run, profile_for
 from custom_components.dishwasher_optimizer.registration import Registration, power_value
 from custom_components.dishwasher_optimizer.runtime import Runtime
 
 BASE = datetime(2026, 1, 1, tzinfo=UTC)
 T = BASE.timestamp()
+
+
+def test_manifest_and_runtime_report_the_same_version():
+    component = Path(__file__).resolve().parents[1] / "custom_components" / DOMAIN
+    manifest = json.loads((component / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["version"] == VERSION
 
 
 def entry():

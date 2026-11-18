@@ -82,6 +82,37 @@ def test_gaps_never_become_zero_and_view_does_not_change_optimum():
     assert view["profiles"][0]["cost"] == -0.015
 
 
+def test_expired_optimum_is_recomputed_without_changing_the_selection_or_snapshot():
+    attributes = intervals()
+    attributes["prices"][1]["value"] = 5
+    source = runs()
+    source.append(Run(2000, 90, [10, 5], program="other"))
+    plan = prepare_plan(source, {"eco": "Eco", "other": "Annat"}, CONFIG, attributes, NOW)
+    assert plan["results"]["eco"]["optimal_start"] == NOW
+
+    now = NOW + 910
+    selected = NOW + 1800
+    with patch("custom_components.dishwasher_optimizer.planning.optimise") as optimise:
+        cached = planning_view(plan, now, selected)["profiles"][0]
+        optimise.assert_not_called()
+    assert cached["optimal_start"] == NOW
+    assert cached["selected_cost"] == pytest.approx(0.075)
+
+    view = planning_view(plan, now, selected, refresh_program="eco")
+    row = view["profiles"][0]
+    assert view["selected_start"] == selected
+    assert row["optimal_start"] == now
+    assert row["cost"] == pytest.approx(0.075)
+    assert row["selected_cost"] == pytest.approx(0.075)
+    assert view["profiles"][1]["optimal_start"] == NOW
+    assert plan["results"]["eco"]["optimal_start"] == NOW
+
+    exhausted = planning_view(plan, NOW + 3600, selected, refresh_program="eco")["profiles"][0]
+    assert exhausted["optimal_start"] is None
+    assert exhausted["cost"] is None
+    assert exhausted["selected_cost"] == pytest.approx(0.075)
+
+
 async def test_runtime_plan_is_transient_without_meter_or_recorder_arrays(hass):
     entry = SimpleNamespace(entry_id="plan", title="Plan", data=CONFIG, options={})
     runtime = Runtime(hass, entry)
