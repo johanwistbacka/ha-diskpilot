@@ -1,6 +1,6 @@
 # Ändringslogg
 
-## Nästa beta
+## 0.1.0-beta.8 – 2026-11-19
 
 - Kompakt kort med **Planerad start**, datumväljare bakom startknappen och snabbvalen **−1 h**, **Nu** och **+1 h**. Kostnader visas med två decimaler under **Vid vald start** och **Billigast**.
 - Prisgränsen visas som **Elpriser till**. Saknade kostnader markeras med **Pris saknas** och förklaras per program. Gemensam beräkningsgrund och sökperiod finns under **Prisunderlag**.
