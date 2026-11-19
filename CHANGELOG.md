@@ -1,5 +1,14 @@
 # Ändringslogg
 
+## Nästa beta
+
+- Kompakt kort med **Planerad start**, datumväljare bakom startknappen och snabbvalen **−1 h**, **Nu** och **+1 h**. Kostnader visas med två decimaler under **Vid vald start** och **Billigast**.
+- Prisgränsen visas som **Elpriser till**. Saknade kostnader markeras med **Pris saknas** och förklaras per program. Gemensam beräkningsgrund och sökperiod finns under **Prisunderlag**.
+- Grafen kan växla mellan **Alla priser** och **Körningen**. Programfärger följer programmen i både rader och graf. Valbar kostnadssortering behåller radordningen vid automatiska uppdateringar.
+- **Planeringsvillkor → Åter i vila senast** begränsar startförslagen. Villkoret använder datum och klockslag i Home Assistants tidszon. En vald start som passerar tidsgränsen markeras separat.
+- **Profiler och historik** samlar profiler, registrering och tidigare körningar bakom egna knappar. Utkast och öppna programdetaljer behålls när prisunderlaget uppdateras.
+- Det valfria fältet `finish_by` i den skrivskyddade åtgärden `get_plan` ger en kortlokal jämförelse. En begränsad beräkning återanvänds för samma prisunderlag och tidsgräns. Sparade profiler, körningar och priskonfiguration behåller sina format.
+
 ## 0.1.0-beta.7 – 2026-11-18
 
 - Snabbvalen **−1 h**, **Nu** och **+1 h** gör det lättare att jämföra kostnader för olika starttider. Kortet uppdaterar kostnad och graf för det senaste valet även vid snabba tryck.

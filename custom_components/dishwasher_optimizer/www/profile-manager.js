@@ -1,14 +1,14 @@
 /* Local file import. No third-party scripts or AI service calls. */
-export function renderProfileControls(card, entryId, profiles, el, number) {
+export function renderProfileControls(card, entryId, profiles, el, number, embedded=false) {
   if (this._formEntry !== entryId) {
     this._formEntry = entryId;
     this._form = {target:"new",name:"",newName:"",filename:"",content:"",preview:null,confirmed:false,busy:false,message:""};
   }
   const f = this._form;
-  const details = el("details");
+  const details = el(embedded ? "section" : "details");
   details.open = Boolean(this._manageOpen || !profiles.length);
   details.addEventListener("toggle",()=>{if(details.isConnected)this._manageOpen=details.open;});
-  details.append(el("summary","Profiler och filimport"));
+  if (!embedded) details.append(el("summary","Profiler och filimport"));
   const links = el("p",undefined,"note");
   const guide = el("a","Instruktion och exempelprompt");
   guide.href="/dishwasher_optimizer/profile-import.html";guide.target="_blank";guide.rel="noopener";

@@ -1,5 +1,6 @@
 """Read-only card planning against synthetic minute curves and interval prices."""
 
+import asyncio
 from copy import deepcopy
 from datetime import UTC, datetime
 from types import SimpleNamespace
@@ -11,7 +12,11 @@ from homeassistant.exceptions import ServiceValidationError
 from custom_components.dishwasher_optimizer import _register_services
 from custom_components.dishwasher_optimizer.const import DEFAULTS, DOMAIN
 from custom_components.dishwasher_optimizer.engine import Run, cost_at, profile_for
-from custom_components.dishwasher_optimizer.planning import planning_view, prepare_plan
+from custom_components.dishwasher_optimizer.planning import (
+    constrain_plan,
+    planning_view,
+    prepare_plan,
+)
 from custom_components.dishwasher_optimizer.runtime import Runtime
 from custom_components.dishwasher_optimizer.sensor import StatusSensor
 
@@ -113,6 +118,84 @@ def test_expired_optimum_is_recomputed_without_changing_the_selection_or_snapsho
     assert exhausted["selected_cost"] == pytest.approx(0.075)
 
 
+@pytest.mark.parametrize("finish_offset", [0, 60, 90, 900, 990, 1000, 86_500])
+def test_finish_limit_only_changes_transient_optimum(finish_offset):
+    plan = prepare_plan(runs(), {"eco": "Eco", "empty": "Tom"}, CONFIG, intervals(), NOW)
+    before = deepcopy(plan)
+    constrained = constrain_plan(plan, NOW, NOW + finish_offset)
+    view = planning_view(constrained, NOW, NOW + 900)
+    row = view["profiles"][0]
+    assert row["selected_cost"] == pytest.approx(-0.015)
+    assert row["meets_finish_by"] == (finish_offset >= 990)
+    assert view["planning_deadline"] == min(NOW + finish_offset, plan["deadline"])
+    assert view["profiles"][1]["energy_wh"] == []
+    assert view["profiles"][1]["status"] == "needs_saved_profile"
+    if finish_offset < 90:
+        assert row["cost"] is None and row["optimal_start"] is None
+    else:
+        assert row["optimal_end"] <= NOW + finish_offset
+        assert row["cost"] == cost_at(plan["profiles"]["eco"], row["optimal_start"], plan["prices"])
+    assert plan == before
+
+
+async def test_finish_limit_caches_one_comparison_and_keeps_storage_and_sensors(hass):
+    entry = SimpleNamespace(entry_id="finish", title="Finish", data=CONFIG, options={})
+    runtime = Runtime(hass, entry)
+    await runtime.async_start()
+    runtime.profiles = {"eco": "Eco"}
+    runtime.runs = runs()
+    hass.states.async_set("sensor.price", "2", intervals())
+    executor = hass.async_add_executor_job
+    comparisons = []
+
+    async def record_comparison(func, *args):
+        if func is constrain_plan:
+            comparisons.append(args[2])
+        return await executor(func, *args)
+
+    with patch(
+        "custom_components.dishwasher_optimizer.runtime.dt_util.utcnow",
+        return_value=datetime.fromtimestamp(NOW, UTC),
+    ):
+        await runtime.async_refresh()
+        before, results = deepcopy(runtime.storage_data()), deepcopy(runtime.results)
+        with patch.object(hass, "async_add_executor_job", side_effect=record_comparison):
+            await asyncio.gather(
+                runtime.async_get_plan(finish_by=NOW + 900),
+                runtime.async_get_plan(NOW + 300, finish_by=NOW + 900),
+            )
+            assert comparisons == [NOW + 900]
+            await runtime.async_get_plan(finish_by=NOW + 990)
+            assert comparisons == [NOW + 900, NOW + 990]
+            await runtime.async_get_plan()
+            assert len(comparisons) == 2
+            await runtime.async_refresh()
+            await runtime.async_get_plan(finish_by=NOW + 990)
+            assert len(comparisons) == 3
+        assert runtime.storage_data() == before
+        assert runtime.results == results
+    await runtime.async_stop()
+
+
+async def test_shutdown_during_constrained_calculation_rejects_the_read(hass):
+    runtime = Runtime(
+        hass, SimpleNamespace(entry_id="finish-unload", title="Finish", data=CONFIG, options={})
+    )
+    await runtime.async_refresh()
+    executor = hass.async_add_executor_job
+
+    async def unload(func, *args):
+        result = await executor(func, *args)
+        if func is constrain_plan:
+            runtime._closed = True
+        return result
+
+    with patch.object(hass, "async_add_executor_job", side_effect=unload):
+        with pytest.raises(ValueError, match="stäng"):
+            await runtime.async_get_plan(finish_by=NOW + 900)
+    assert runtime._comparison is None
+
+
 async def test_runtime_plan_is_transient_without_meter_or_recorder_arrays(hass):
     entry = SimpleNamespace(entry_id="plan", title="Plan", data=CONFIG, options={})
     runtime = Runtime(hass, entry)
@@ -192,3 +275,28 @@ async def test_service_rejects_naive_start_and_accepts_offset(hass):
             return_response=True,
         )
     assert result["selected_start"] == datetime(2026, 11, 14, 11, tzinfo=UTC).timestamp()
+
+
+async def test_service_finish_limit_requires_offset(hass):
+    entry = SimpleNamespace(
+        entry_id="finish-service", title="Finish", domain=DOMAIN, data=CONFIG, options={}
+    )
+    entry.runtime_data = Runtime(hass, entry)
+    _register_services(hass)
+    with patch.object(hass.config_entries, "async_get_entry", return_value=entry):
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(
+                DOMAIN,
+                "get_plan",
+                {"entry_id": entry.entry_id, "finish_by": "2026-11-14T23:00"},
+                blocking=True,
+                return_response=True,
+            )
+        result = await hass.services.async_call(
+            DOMAIN,
+            "get_plan",
+            {"entry_id": entry.entry_id, "finish_by": "2026-11-14T23:00+01:00"},
+            blocking=True,
+            return_response=True,
+        )
+        assert result["finish_by"] == datetime(2026, 11, 14, 22, tzinfo=UTC).timestamp()

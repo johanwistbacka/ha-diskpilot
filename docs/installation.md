@@ -119,9 +119,13 @@ Vid ett integrationsfel finns loggen under **Inställningar → System → Logga
 
 ## Planering i kortet
 
-Efter uppdatering och omstart visas **Beräknad start**, kostnad per program och billigaste start. **Nu** följer aktuell tid vid omräkning; ett manuellt datum/klockslag gäller bara kortet och styr inte apparaten. Grafens grönt–gult–rött anger lågt–högt pris relativt den tillgängliga prognosen. Programkurvorna visar beräknad effekt i W. Använd **−1 h**, **Nu** och **+1 h** för att jämföra starttider. Under varje program kan du välja billigaste start. Om förslaget har passerat uppdateras det och din valda starttid ligger kvar.
+Nästa beta visar **Planerad start**, **Vid vald start** och **Billigast**. Klicka på starttiden för datumväljaren. **Nu** följer aktuell tid vid omräkning. Använd **−1 h**, **Nu** och **+1 h** för att jämföra starttider. Under varje program kan du välja billigaste start. Ett passerat förslag uppdateras medan din valda starttid ligger kvar.
 
-Graf och manuellt startval kräver administratör. Övriga användare ser billigaste kostnad och start. **Profiler och körningar** öppnar befintlig filimport, registrering och senaste körningar. Klicka på en programrad för hela namnet, energi och övriga detaljer.
+**Elpriser till** visar prisunderlagets slut. **Pris saknas** betyder att hela programmets kostnad kräver ytterligare prisdata. Programdetaljerna förklarar saknade priser. Växla mellan **Alla priser** och **Körningen** för att läsa grafen. **Prisunderlag** samlar priskällor och sökperiod.
+
+Aktivera **Planeringsvillkor → Åter i vila senast** för att begränsa startförslagen. Ange datum och klockslag i Home Assistants tidszon. En vald start som slutar efter tidsgränsen markeras i programraden. Tvetydiga klockslag vid vintertidsbytet behöver ersättas med en tid före eller efter den upprepade timmen.
+
+Graf och manuellt startval kräver administratör. Övriga användare ser billigaste kostnad och start. **Profiler och historik** öppnar **Profiler**, **Registrera körning** och **Historik**. Klicka på en programrad för energi och övriga detaljer.
 
 Återgång till beta.6 kräver ingen datamigrering eller ändrad priskonfiguration. Före återgång till beta.5 väljer du **Färdig totalprislista** och återställer tidigare sensormappning; se [prisguiden](pricing.md#uppdatering-felsökning-och-återgång). Starta om och ladda om webbläsaren efter kodbyte. För YAML-resurser i beta.7: använd `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.7`. Automatiskt hanterade resurser får även en innehållsbaserad cacheversion för alla kortets moduler.
 
