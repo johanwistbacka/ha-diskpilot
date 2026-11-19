@@ -39,7 +39,7 @@ function plot(container, draft, selection, el, number) {
   if(draft.energy_kwh===null)container.append(el("p","Kurvan innehåller ofullständiga eller ogiltiga mätvärden. Noll i en sådan del är ingen uppmätt nollförbrukning.","note"));
 }
 
-export function renderRegistration(card, entryId, profiles, status, el, number) {
+export function renderRegistration(card, entryId, profiles, status, el, number, embedded=false) {
   if(this._recordEntry!==entryId){
     this._recordEntry=entryId;
     this._record={open:false,mode:"now",target:"new",name:"",endMode:"manual",endAt:"",from:"",to:"",draft:null,selected:null,preview:null,confirmed:false,busy:false,message:"",request:0,lastLoad:0};
@@ -105,7 +105,8 @@ export function renderRegistration(card, entryId, profiles, status, el, number) 
   function draw(){
     const active=node.getRootNode().activeElement,label=node.contains(active)?active?.getAttribute('aria-label'):null;
     if(label&&!f.busy)queueMicrotask(()=>{if(!valid()||f.busy)return;const target=[...node.querySelectorAll('input,select')].find(e=>e.getAttribute('aria-label')===label);if(target&&!target.disabled)target.focus({preventScroll:true});});
-    node.replaceChildren();node.open=f.open;node.append(el("summary","Registrera profil"));
+    node.replaceChildren();node.open=embedded||f.open;
+    const heading=el("summary","Registrera profil");heading.hidden=embedded;node.append(heading);
     const content=el("div",undefined,"registration-body"),message=el("p",f.message,"message");message.setAttribute("role","status");message.setAttribute("aria-live","polite");content.append(message);node.append(content);
     const draft=f.draft;
     if(!draft){
@@ -165,8 +166,8 @@ export function renderRegistration(card, entryId, profiles, status, el, number) 
   this._registrationUpdate=next=>{
     f.status=next;
     const remote=next.registration;
-    if(!f.open||f.busy)return;
-    if((remote?.draft_id||null)!==(f.draft?.draft_id||null)||remote?.stage!==f.draft?.stage){execute(async()=>{await load();f.message="";});}
+    if(!this._hass.user?.is_admin||!f.open||f.busy)return;
+    if((remote?.draft_id||null)!==(f.draft?.draft_id||null)||(remote?.stage||'none')!==(f.draft?.stage||'none')){execute(async()=>{await load();f.message="";});}
     else if(remote?.stage==="recording"&&Date.now()-f.lastLoad>5000){
       f.lastLoad=Date.now();const id=++f.request;
       call("get_registration").then(data=>{if(valid()&&id===f.request&&!f.busy){if(data.stage!==f.draft?.stage){execute(async()=>{checkedDraft(data);if(f.draft?.stage==='review'&&f.draft.energy_wh?.length)await preview();f.message='';});}else{f.draft=data;drawLive();}}}).catch(()=>{});

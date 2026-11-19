@@ -118,7 +118,7 @@ async def test_numeric_invalid_registration_can_be_reviewed_but_not_trained(hass
 
 CALLS = {
     "get_runs": {},
-    "get_plan": {},
+    "get_plan": {"finish_by": (BASE + timedelta(hours=8)).isoformat()},
     "label_run": {"run_id": "old", "program": "unassigned"},
     "import_run": {"started_at": BASE.isoformat(), "duration_seconds": 120, "energy_wh": [1, 2]},
     "save_profile": {"name": "Eco"},

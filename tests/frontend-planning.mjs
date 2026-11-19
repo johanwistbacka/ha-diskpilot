@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import test from 'node:test';
 const source=await readFile(new URL('../custom_components/dishwasher_optimizer/www/plan-data.js',import.meta.url),'utf8');
-const {localInput,repeatedTimeOffset,priceRange,priceFraction,powerSegments,chartDomain,LatestPlanRequests}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+const {localInput,repeatedTimeOffset,relativeTime,coverageMessage,priceRange,priceFraction,powerSegments,chartDomain,LatestPlanRequests}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 
 test('HA zone determines input, regardless of browser zone',()=>{
  assert.equal(localInput(Date.parse('2026-11-14T12:34Z')/1000,'Europe/Stockholm'),'2026-11-14T13:34');
@@ -35,6 +35,25 @@ test('partial minute watts integrate back to original energy',()=>{
 test('chart covers all known prices and selected profile; no coverage implied',()=>{
  assert.deepEqual(chartDomain({now:100,selected_start:200,prices:[[0,9000,2]],profiles:[{selected_end:400}]}),{start:60,end:9000});
  assert.equal(chartDomain({now:100,selected_start:10000,prices:[[0,9000,2]],profiles:[{selected_end:11000}]}).end,11000);
+});
+test('run zoom follows visible program lengths and retains a useful scale with no visible programs',()=>{
+ const view={now:100,selected_start:1000,prices:[[0,9000,2]],profiles:[{id:'long',duration_seconds:7200},{id:'short',duration_seconds:90}]};
+ assert.deepEqual(chartDomain(view,'run'),{start:1000,end:8200});
+ assert.deepEqual(chartDomain(view,'run',new Set(['long'])),{start:1000,end:1090});
+ assert.deepEqual(chartDomain(view,'run',new Set(['long','short'])),{start:1000,end:4600});
+});
+test('relative dates use the HA calendar day through spring and autumn changes',()=>{
+ const seconds=value=>Date.parse(value)/1000;
+ assert.equal(relativeTime(seconds('2026-03-30T00:00Z'),seconds('2026-03-28T23:30Z'),'Europe/Stockholm'),'I morgon 02.00');
+ assert.equal(relativeTime(seconds('2026-10-25T23:00Z'),seconds('2026-10-24T22:30Z'),'Europe/Stockholm'),'I morgon 00.00');
+ assert.equal(relativeTime(seconds('2027-01-01T00:00Z'),seconds('2026-12-31T10:00Z'),'Europe/Stockholm'),'I morgon 01.00');
+});
+test('coverage explanation distinguishes an exhausted horizon from missing intervals and profile data',()=>{
+ const view={price_status:'ok',prices:[[0,100,1],[120,300,2]]};
+ assert.match(coverageMessage({sample_count:1,selected_cost:null,selected_end:400},view),/slutar efter/);
+ assert.match(coverageMessage({sample_count:1,selected_cost:null,selected_end:200},view),/hela eller delar/);
+ assert.equal(coverageMessage({sample_count:1,selected_cost:0,selected_end:200},view),'');
+ assert.match(coverageMessage({sample_count:0},view),/märkt körning/);
 });
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};

@@ -2,7 +2,7 @@
 
 Diskpilot använder egna namngivna programprofiler för att beräkna billigaste start och elkostnad. Du ser alla program samtidigt. En effektsensor är valfri och behövs bara om du vill samla in nya körningar.
 
-**Beta 0.1.0-beta.7.** Kräver Home Assistant 2026.11 eller senare. Ingen automatisk start av maskinen. Du väljer profilnamnen själv. Tidigare installerade P2/P3/P4-profiler och deras underlag bevaras vid uppdatering. Ingen personlig mätdata eller förinställd förbrukning följer med koden. Installation i användarens produktionsmiljö är ännu inte verifierad.
+**Beta 0.1.0-beta.8.** Kräver Home Assistant 2026.11 eller senare. Ingen automatisk start av maskinen. Du väljer profilnamnen själv. Tidigare installerade P2/P3/P4-profiler och deras underlag bevaras vid uppdatering. Ingen personlig mätdata eller förinställd förbrukning följer med koden. Installation i användarens produktionsmiljö är ännu inte verifierad.
 
 ## Installation och uppdateringar
 
@@ -10,13 +10,13 @@ Diskpilot använder egna namngivna programprofiler för att beräkna billigaste 
 
 Snabbstart för Home Assistant 2026.11 eller senare:
 
-1. Installera **0.1.0-beta.7** via Marketplace med **Pre-release** aktiverat. De fullständiga stegen finns i guiden.
+1. Installera **0.1.0-beta.8** via Marketplace med **Pre-release** aktiverat. De fullständiga stegen finns i guiden.
 2. Lägg till **Diskpilot** under **Inställningar → Enheter och tjänster → Lägg till integration**. Sensorer och profilnamn är valfria vid start.
 3. Lägg till **Diskpilot** i dashboardens kortväljare och tillför egna profilkörningar genom filimport eller registrering.
 
 Guiden innehåller även manuell installation, uppdatering från beta.1 och felsökning. Profilhantering och registreringsåtgärder kräver administratörsbehörighet. Ta en säkerhetskopia före installation eller uppdatering.
 
-Den numrerade betan finns under [GitHub Releases](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.7) och är markerad som pre-release. Marketplace/HACS hämtar integrationsfilerna från den valda taggen; någon separat ZIP-asset krävs inte. Huvudgrenen används för fortsatt utveckling. Se [ändringsloggen](CHANGELOG.md).
+Den numrerade betan finns under [GitHub Releases](https://github.com/johanwistbacka/ha-diskpilot/releases/tag/0.1.0-beta.8) och är markerad som pre-release. Marketplace/HACS hämtar integrationsfilerna från den valda taggen; någon separat ZIP-asset krävs inte. Huvudgrenen används för fortsatt utveckling. Se [ändringsloggen](CHANGELOG.md).
 
 Beta.6 lägger till valbar Nord Pool-källa, Eltariff och redigerbart avtalspåslag. Se [priser och avtal](docs/pricing.md).
 
@@ -24,7 +24,7 @@ Beta.6 lägger till valbar Nord Pool-källa, Eltariff och redigerbart avtalspås
 
 Ta en Home Assistant-säkerhetskopia före installation eller uppdatering, inklusive konfigurationens `.storage`, och spara återställningsnyckeln. Lokal historik och profiler ligger i `.storage`, utanför integrationskoden, och ersätts inte vid en normal koduppdatering.
 
-Återgång från beta.7 till beta.6 kräver ingen datamigrering eller ändrad priskonfiguration. Före återgång till beta.5 väljer du **Färdig totalprislista** och återställer din tidigare prissensor/mappning. Beta.5 kan inte kombinera de nya priskällorna. Profiler och körningar bevaras.
+Återgång från beta.8 till beta.7 kräver ingen datamigrering eller ändrad priskonfiguration. Kortets tidsgräns, sortering och grafzoom väljs på nytt vid sidladdning. Före återgång till beta.5 väljer du **Färdig totalprislista** och återställer din tidigare prissensor/mappning. Beta.5 kan inte kombinera de nya priskällorna. Profiler och körningar bevaras.
 
 Återgång från beta.5 till beta.4 kräver ingen datamigrering. Kortets startval och graf introducerades i beta.5; profil-ID:n, körningar och inställningar har samma format. Starta om Home Assistant och ladda om webbläsaren efter kodbyte.
 
@@ -94,11 +94,15 @@ Som första underlag räcker en märkt körning per program. Kortet visar när u
 
 ## Dashboard-kort
 
-Kortet ingår i integrationen och uppdateras tillsammans med den. Programraderna visar kostnad vid **Beräknad start**, billigaste start och dess kostnad. Startvalet följer **Nu** som standard, eller ett eget datum och klockslag i Home Assistants tidszon. Snabbvalen **−1 h**, **Nu** och **+1 h** flyttar starten utan att gå före aktuell tid. Under varje program kan du välja **Välj billigaste start** för att jämföra alla program vid den tidpunkten. Om förslaget har passerat uppdateras det medan din valda start ligger kvar. Valet gäller bara detta kort och sparas inte över sidladdning. Det ändrar inte programsensorernas billigaste start och styr inte maskinen.
+Kortet ingår i integrationen och uppdateras tillsammans med den. Programraderna visar **Vid vald start** och **Billigast**, med två decimaler för kostnaden. **Planerad start** följer **Nu** som standard. Klicka på starttiden för att öppna datumväljaren i Home Assistants tidszon. Snabbvalen **−1 h**, **Nu** och **+1 h** flyttar starten. Under varje program kan du välja **Välj billigaste start** för att jämföra alla program vid den tidpunkten. Ett passerat förslag uppdateras medan din valda start ligger kvar. Valen gäller kortet under den aktuella sidladdningen.
 
-Grafen visar hela den tillgängliga framtida prisperioden samt programmens beräknade effekt vid vald start. Vänster skala är pris/kWh, höger skala är W. Priset färgas grönt vid prognosens lägsta värde, gult däremellan och rött vid dess högsta. Färgerna är relativa till just denna prognos, inte fasta prisgränser. Negativa priser stöds; oförändrat pris visas gult. Saknade prisintervall lämnas tomma och ger ingen beräknad kostnad om körningen inte täcks helt. Profilkurvor kan döljas med respektive knapp. Piltangenterna läser grafvärden när grafen har fokus; Escape stänger värderutan.
+**Elpriser till** visar sista kända prisintervallets slut. Varje kostnad kräver priser för hela körningen. **Pris saknas** förklaras i programmets detaljer. Under **Prisunderlag** finns gemensam beräkningsgrund och sökperiod. **Lägst kostnad** sorterar programmen vid startvalet. Ordningen ligger kvar när en automatisk prisuppdatering kommer.
 
-Klicka på ett program för energi, längd, antal underlag och beräknad återgång till vila. Fullständigt namn finns i den utfällda raden även när ett långt namn kortas i översikten. **Profiler och körningar** samlar filimport, registrering och de fem senaste körningarna bakom en utfällning. Grafen kan också fällas ihop. Hur mycket som ryms beror på kortets bredd och antalet profiler.
+Under **Planeringsvillkor** kan du aktivera **Åter i vila senast** och ange ett datum och klockslag. Billigaste start begränsas då till körningar som ryms före tidsgränsen och inom integrationens sökperiod. En vald start som slutar senare markeras med **Efter tidsgränsen**. Villkoret påverkar kortets jämförelse. Programsensorerna följer integrationens vanliga planering.
+
+Grafen visar **Alla priser** eller **Körningen** från vald start till den längsta synliga profilens slut. Vänster skala är pris/kWh, höger skala är W. Priset färgas grönt vid prognosens lägsta värde, gult däremellan och rött vid dess högsta. Färgreferensen använder hela prisperioden även när grafen zoomas. Negativa priser stöds och oförändrat pris visas gult. Saknade prisintervall lämnas tomma. Profilkurvor kan döljas med respektive knapp. Piltangenterna läser grafvärden när grafen har fokus och Escape stänger värderutan.
+
+Klicka på ett program för energi, längd, antal underlag, möjlig besparing och beräknad återgång till vila. **Profiler och historik** samlar **Profiler**, **Registrera körning** och **Historik** bakom en utfällning. Utkast finns kvar när du växlar mellan delarna. Grafen kan också fällas ihop.
 
 **Graf och valbar start kräver administratör.** De läser skyddade profilkurvor via den nya skrivskyddade åtgärden `get_plan`. Övriga användare behåller översikten med programsensorernas billigaste kostnad och start. Minutkurvor och prislistor läggs inte till i sensors historikattribut. Beräkningen sker utanför Home Assistants eventloop med samma energimotor som tidigare.
 
@@ -111,7 +115,7 @@ type: custom:diskpilot-card
 title: Diskmaskinen
 ```
 
-Har du flera maskiner väljer du vilken i kortets visuella inställningar. YAML-baserade dashboardresurser ändras inte automatiskt. Lägg i så fall till modulen `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.7` bland dina resurser.
+Har du flera maskiner väljer du vilken i kortets visuella inställningar. YAML-baserade dashboardresurser ändras inte automatiskt. Lägg i så fall till modulen `/dishwasher_optimizer/diskpilot-card.js?v=0.1.0-beta.8` bland dina resurser.
 
 ## Åtgärder för export, import och märkning
 

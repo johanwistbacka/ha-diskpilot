@@ -20,7 +20,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DEFAULTS, DOMAIN, PROGRAMS
 from .engine import Collector, Run, finite
-from .planning import planning_view, prepare_plan
+from .planning import constrain_plan, planning_view, prepare_plan
 from .price_sources import PriceSources
 from .profile_files import import_summary, parse_profile_file, profile_name
 from .registration import Registration, history_registration, power_value
@@ -43,6 +43,8 @@ class Runtime:
         self.collector = Collector()
         self.results = {}
         self._planning = None
+        self._comparison = None
+        self._comparison_lock = asyncio.Lock()
         self.plan_revision = 0
         self.price_sources = PriceSources(hass)
         self.price_basis = "Färdig totalprislista"
@@ -281,13 +283,14 @@ class Runtime:
             if self._closed or config != self.config:
                 return
             self._planning = plan
+            self._comparison = None
             self.results = plan["results"]
             self.price_status = plan["price_status"]
             self.price_basis = plan["price_basis"]
             self.plan_revision += 1
             async_dispatcher_send(self.hass, self.signal)
 
-    async def async_get_plan(self, started_at=None, *, refresh_program=None):
+    async def async_get_plan(self, started_at=None, *, refresh_program=None, finish_by=None):
         """A card-local comparison never changes options, stored runs or scheduling."""
         self._require_open()
         if self._planning is None:
@@ -298,6 +301,20 @@ class Runtime:
         now = dt_util.utcnow().timestamp()
         selected = now if started_at is None else finite(started_at)
         plan, revision = self._planning, self.plan_revision
+        if finish_by is not None:
+            finish_by = finite(finish_by)
+            async with self._comparison_lock:
+                self._require_open()
+                cached = self._comparison
+                if cached is None or cached[0] is not plan or cached[1] != finish_by:
+                    comparison = await self.hass.async_add_executor_job(
+                        constrain_plan, plan, now, finish_by
+                    )
+                    self._require_open()
+                    cached = (plan, finish_by, comparison)
+                    if self._planning is plan:
+                        self._comparison = cached
+                plan = cached[2]
         view = await self.hass.async_add_executor_job(
             planning_view, plan, now, selected, refresh_program
         )

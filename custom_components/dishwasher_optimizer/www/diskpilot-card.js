@@ -67,7 +67,6 @@ class DiskpilotCard extends HTMLElement {
       direction: active.selectionDirection,
     } : null;
     if (root.querySelector("details.manage")) this._toolsOpen = root.querySelector("details.manage").open;
-    if (root.querySelector("details.recent")) this._recentOpen = root.querySelector("details.recent").open;
     root.replaceChildren();
     const style = el("style");
     style.textContent = `
@@ -85,6 +84,8 @@ class DiskpilotCard extends HTMLElement {
       .registration-body { display:grid;gap:12px;min-width:0; } .registration-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;} .registration-field {display:grid;gap:6px;min-width:0;font-size:13px;} .registration-field input,.registration-field select {width:100%;min-width:0;} .registration-chart svg {height:auto;display:block;} .registration-chart {color:var(--primary-color);min-width:0;} .registration-body h3,.registration-body p {margin:0;} .registration-body .review {margin:0;} .secondary {background:transparent;color:var(--primary-color);border:1px solid var(--divider-color);} input[type=range] {min-height:44px;accent-color:var(--primary-color);} .registration-save {justify-self:start;}
       @media(max-width:480px){.registration-grid{grid-template-columns:1fr;}input[type=datetime-local],input[type=text]{font-size:16px;}}
       details.manage { margin:8px 0 0; }
+      .tool-nav {display:flex;flex-wrap:wrap;gap:5px;margin:0 0 12px;} .tool-nav button {font-size:12px;min-height:36px;padding:5px 9px;} .tool-nav button[aria-pressed=true] {background:var(--secondary-background-color);border-color:transparent;}
+      .tool-panel {min-width:0;} .tool-panel[hidden],.tool-panel [hidden] {display:none!important;} .tool-panel details.registration {margin:0;} .tool-panel h3:first-of-type {margin-top:12px;} .tool-panel .registration>summary[hidden] {display:none;}
       details { margin:18px 0; } summary { cursor:pointer;min-height:44px;line-height:44px; } a {color:var(--primary-color);}
       .review { display:flex;align-items:center;gap:10px;min-height:44px;margin:12px 0; } .review input {width:22px;height:22px;flex-shrink:0;}
       .preview { padding:12px;border:1px solid var(--divider-color);border-radius:8px;margin:12px 0; } svg {width:100%;height:70px;color:var(--primary-color);}
@@ -104,12 +105,50 @@ class DiskpilotCard extends HTMLElement {
     const profiles = status.attributes.profiles || [];
     renderPlanning.call(this,card,entryId,profiles,status.attributes,el,number,zonedTimestamp);
     const manage = el("details",undefined,"manage");manage.open=this._toolsOpen??!profiles.length;
-    const manageSummary = el("summary","Profiler och körningar");manageSummary.dataset.focusKey="manage";manage.append(manageSummary);card.append(manage);
-    renderProfileControls.call(this,manage,entryId,profiles,el,number);
-    renderRegistration.call(this,manage,entryId,profiles,status.attributes,el,number);
-    const recent = el("details", undefined, "recent"); recent.open = Boolean(this._recentOpen);
-    const recentSummary = el("summary", "Senaste körningarna"); recentSummary.dataset.focusKey = "recent-runs";
-    recent.append(recentSummary); manage.append(recent);
+    const manageSummary = el("summary","Profiler och historik");manageSummary.dataset.focusKey="manage";manage.append(manageSummary);card.append(manage);
+    const admin = Boolean(this._hass.user?.is_admin);
+    const stage = status.attributes.registration?.stage;
+    if (this._toolEntry !== entryId) {
+      this._toolEntry = entryId;
+      this._toolTab = admin ? 'profiles' : 'history';
+      this._toolStage = null;
+    }
+    if (admin && stage !== this._toolStage && ['recording', 'review'].includes(stage)) {
+      this._toolTab = 'record';
+      manage.open = true;
+    }
+    this._toolStage = stage;
+    if (!admin) this._toolTab = 'history';
+    const navigation = el('div', undefined, 'tool-nav');
+    const panels = new Map(), buttons = new Map();
+    navigation.setAttribute('aria-label', 'Profiler och historik');
+    manage.append(navigation);
+    for (const [id, caption] of [['profiles', 'Profiler'], ['record', 'Registrera körning'], ['history', 'Historik']]) {
+      if (!admin && id !== 'history') continue;
+      const panel = el('section', undefined, 'tool-panel');
+      panel.id = `tool-${entryId}-${id}`;
+      panel.setAttribute('aria-label', caption);
+      panels.set(id, panel);
+      const button = el('button', caption, 'secondary');
+      button.type = 'button';
+      button.dataset.focusKey = `tool-${id}`;
+      button.setAttribute('aria-controls', panel.id);
+      buttons.set(id, button);
+      button.addEventListener('click', () => {
+        this._toolTab = id;
+        for (const [key, item] of panels) item.hidden = key !== id;
+        for (const [key, item] of buttons) item.setAttribute('aria-pressed', String(key === id));
+      });
+      navigation.append(button);
+      manage.append(panel);
+    }
+    for (const [id, panel] of panels) panel.hidden = id !== this._toolTab;
+    for (const [id, button] of buttons) button.setAttribute('aria-pressed', String(id === this._toolTab));
+    if (admin) {
+      renderProfileControls.call(this, panels.get('profiles'), entryId, profiles, el, number, true);
+      renderRegistration.call(this, panels.get('record'), entryId, profiles, status.attributes, el, number, true);
+    }
+    const recent = panels.get('history');
     const message = el("div", this._message || "", "message");
     message.setAttribute("role", "status"); message.setAttribute("aria-live", "polite");
     recent.append(message);
@@ -126,8 +165,10 @@ class DiskpilotCard extends HTMLElement {
         const option = el("option", label); option.value = value; select.append(option);
       }
       select.value = this._drafts?.[run.run_id] || run.program || "unassigned";
+      select.disabled=!admin;
       select.addEventListener("change", () => { (this._drafts ||= {})[run.run_id] = select.value; });
       const button = el("button", "Spara program");
+      button.disabled=!admin;
       button.addEventListener("click", async () => {
         button.disabled = true;
         try {

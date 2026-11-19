@@ -15,6 +15,10 @@ get_plan:
       description: Optional profile ID. Refresh its cheapest start if the cached recommendation has expired.
       selector:
         text:
+    finish_by:
+      description: Optional ISO timestamp with UTC offset. Only suggest starts that return to idle by this time. Card-local and never saved.
+      selector:
+        text:
 
 get_runs:
   name: Export runs

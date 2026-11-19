@@ -42,6 +42,23 @@ def prepare_plan(runs, names, config, attributes, now, market=None):
     }
 
 
+def constrain_plan(plan, now, finish_by):
+    """A transient comparison uses the same profiles and price snapshot."""
+    deadline = min(plan["deadline"], finish_by)
+    results = {}
+    for key, profile in plan["profiles"].items():
+        result = plan["results"][key]
+        if profile and plan["prices"] and deadline < plan["deadline"]:
+            current = optimise(profile, now, deadline, plan["prices"])
+            result = {
+                **result,
+                **current,
+                "status": "ok" if current["cost"] is not None else "insufficient_price_coverage",
+            }
+        results[key] = result
+    return {**plan, "results": results, "deadline": deadline, "finish_by": finish_by}
+
+
 def planning_view(plan, now, selected_start, refresh_program=None):
     """Return transient averages, not raw runs or extra Recorder attributes."""
     profiles = []
@@ -66,6 +83,11 @@ def planning_view(plan, now, selected_start, refresh_program=None):
                 "energy_wh": list(profile.energy_wh) if profile else [],
                 "selected_cost": selected_cost,
                 "selected_end": selected_start + profile.duration_seconds if profile else None,
+                "meets_finish_by": (
+                    selected_start + profile.duration_seconds <= plan["finish_by"]
+                    if profile and plan.get("finish_by") is not None
+                    else None
+                ),
             }
         )
     return {
@@ -73,6 +95,7 @@ def planning_view(plan, now, selected_start, refresh_program=None):
         "selected_start": selected_start,
         "generated_at": plan["generated_at"],
         "planning_deadline": plan["deadline"],
+        "finish_by": plan.get("finish_by"),
         "currency": plan["currency"],
         "price_status": plan["price_status"],
         "price_basis": plan["price_basis"],
